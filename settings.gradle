@@ -1,2 +1,4 @@
 rootProject.name = 'JCInterpret'
+include 'core'
+include 'parser'
 
