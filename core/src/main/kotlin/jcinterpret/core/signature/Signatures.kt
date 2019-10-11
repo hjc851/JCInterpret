@@ -76,6 +76,19 @@ data class ArrayTypeSignature(val componentType: TypeSignature) : ReferenceTypeS
 data class PrimitiveTypeSignature internal constructor(
     val code: Char
 ) : TypeSignature() {
+
+    companion object {
+        val BOOLEAN = PrimitiveTypeSignature('Z')
+        val BYTE = PrimitiveTypeSignature('B')
+        val CHAR = PrimitiveTypeSignature('C')
+        val SHORT = PrimitiveTypeSignature('S')
+        val INT = PrimitiveTypeSignature('I')
+        val LONG = PrimitiveTypeSignature('J')
+        val FLOAT = PrimitiveTypeSignature('F')
+        val DOUBLE = PrimitiveTypeSignature('D')
+        val VOID = PrimitiveTypeSignature('V')
+    }
+
     override fun toString(): String {
         return "$code"
     }

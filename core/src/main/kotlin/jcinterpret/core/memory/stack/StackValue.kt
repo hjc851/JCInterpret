@@ -6,6 +6,7 @@ abstract class StackValue {
 
 enum class StackType {
     REFERENCE,
+    VOID,
     BYTE,
     SHORT,
     INT,
