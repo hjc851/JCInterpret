@@ -1,9 +1,9 @@
 package jcinterpret.core.ctx.frame.interpreted
 
 import jcinterpret.core.ctx.frame.MethodBoundExecutionFrame
-import jcinterpret.core.signature.QualifiedMethodSignature
+import jcinterpret.signature.QualifiedMethodSignature
 
-class InterpretedExecutionFrame (
+abstract class InterpretedExecutionFrame (
     override val method: QualifiedMethodSignature
 ): MethodBoundExecutionFrame() {
 

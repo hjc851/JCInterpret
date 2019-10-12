@@ -1,16 +1,21 @@
 package jcinterpret.core.ctx
 
-import jcinterpret.core.ExecutionTrace
 import jcinterpret.core.JavaConcolicInterpreter
-import jcinterpret.core.DescriptorLibrary
 import jcinterpret.core.control.*
 import jcinterpret.core.ctx.frame.ExecutionFrame
 import jcinterpret.core.ctx.frame.MethodBoundExecutionFrame
-import jcinterpret.core.signature.QualifiedMethodSignature
+import jcinterpret.core.ctx.meta.ClassArea
+import jcinterpret.core.ctx.meta.HeapArea
+import jcinterpret.core.ctx.meta.NativeArea
+import jcinterpret.core.descriptors.DescriptorLibrary
+import jcinterpret.core.trace.ExecutionTrace
+import jcinterpret.core.trace.TracerRecord
+import jcinterpret.signature.QualifiedMethodSignature
 import java.util.*
 
 class ExecutionContext (
     val interpreter: JavaConcolicInterpreter,
+    val records: MutableList<TracerRecord>,
     val library: DescriptorLibrary,
     val heapArea: HeapArea,
     val classArea: ClassArea,
@@ -47,6 +52,7 @@ class ExecutionContext (
 
             } catch (e: BreakException) {
                 TODO()
+
             } catch (e: ThrowException) {
                 TODO()
 

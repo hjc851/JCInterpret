@@ -1,13 +1,15 @@
-package jcinterpret.core
+package jcinterpret.core.descriptors
 
 import jcinterpret.core.memory.stack.*
-import jcinterpret.core.signature.*
+import jcinterpret.signature.*
 
 //
 //  Descriptors
 //
 
-interface TypeDescriptor {
+interface Descriptor
+
+interface TypeDescriptor: Descriptor {
     val signature: TypeSignature
     val defaultValue: StackValue
     val stackType: StackType
@@ -35,17 +37,16 @@ abstract class ClassTypeDescriptor: ReferenceTypeDescriptor() {
 
     abstract val outerclass: ClassTypeSignature?
     abstract val innerclasses: List<ClassTypeSignature>
+    abstract val enclosingMethod: QualifiedMethodSignature?
 
     abstract val fields: Map<String, FieldDescriptor>
     abstract val methods: Map<String, MethodDescriptor>
 }
 
-abstract class ArrayTypeDescriptor: ReferenceTypeDescriptor() {
-    abstract override val signature: ArrayTypeSignature
-
-    val componentType: TypeSignature
-        get() = signature.componentType
-}
+class ArrayTypeDescriptor (
+    override val signature: ArrayTypeSignature,
+    val componentType: TypeDescriptor
+): ReferenceTypeDescriptor()
 
 enum class PrimitiveTypeDescriptor (
     override val signature: PrimitiveTypeSignature,
@@ -63,14 +64,15 @@ enum class PrimitiveTypeDescriptor (
     VOID (PrimitiveTypeSignature.VOID, StackNil, StackType.VOID)
 }
 
-abstract class MethodDescriptor {
+abstract class MethodDescriptor: Descriptor {
     abstract val qualifiedSignature: QualifiedMethodSignature
     val signature: MethodSignature
         get() = qualifiedSignature.methodSignature
 
-    abstract val parameters: List<TypeSignature>
+    val parameters: List<TypeSignature>
+        get() = qualifiedSignature.methodSignature.typeSignature.argumentTypes.toList()
 
-    abstract val exceptions: Array<ClassTypeSignature>
+    abstract val exceptions: List<ClassTypeSignature>
 
     abstract val isStatic: Boolean
     abstract val isAbstract: Boolean
@@ -81,7 +83,7 @@ abstract class MethodDescriptor {
     }
 }
 
-abstract class FieldDescriptor {
+abstract class FieldDescriptor: Descriptor {
     abstract val name: String
     abstract val type: TypeSignature
 

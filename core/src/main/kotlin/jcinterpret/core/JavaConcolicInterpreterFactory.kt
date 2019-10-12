@@ -1,15 +1,16 @@
 package jcinterpret.core
 
-import jcinterpret.core.ctx.ClassArea
 import jcinterpret.core.ctx.ExecutionContext
-import jcinterpret.core.ctx.HeapArea
-import jcinterpret.core.ctx.NativeArea
 import jcinterpret.core.ctx.frame.ExecutionFrame
 import jcinterpret.core.ctx.frame.synthetic.*
+import jcinterpret.core.ctx.meta.ClassArea
+import jcinterpret.core.ctx.meta.HeapArea
+import jcinterpret.core.ctx.meta.NativeArea
+import jcinterpret.core.descriptors.DescriptorLibrary
 import jcinterpret.core.memory.stack.StackReference
 import jcinterpret.core.memory.stack.StackValue
-import jcinterpret.core.signature.QualifiedMethodSignature
 import jcinterpret.core.trace.TracerRecord
+import jcinterpret.signature.QualifiedMethodSignature
 import java.util.*
 
 object JavaConcolicInterpreterFactory {
@@ -59,12 +60,13 @@ object JavaConcolicInterpreterFactory {
             instructions.push(AllocateSymbolic(entryPoint.declaringClassSignature))
         }
 
-        val frame = SyntheticExecutionFrame("Bootstrap", instructions, operands)
+        val frame = SyntheticExecutionFrame("BOOTSTRAP $entryPoint", instructions, operands)
         val frames = Stack<ExecutionFrame>()
         frames.push(frame)
 
-        return ExecutionContext(
+        return ExecutionContext (
             interpreter,
+            mutableListOf(),
             library,
             HeapArea(),
             ClassArea(),

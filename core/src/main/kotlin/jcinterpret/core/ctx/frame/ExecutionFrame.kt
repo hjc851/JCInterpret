@@ -3,7 +3,7 @@ package jcinterpret.core.ctx.frame
 import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.memory.stack.StackNil
 import jcinterpret.core.memory.stack.StackValue
-import jcinterpret.core.signature.QualifiedMethodSignature
+import jcinterpret.signature.QualifiedMethodSignature
 
 abstract class ExecutionFrame {
     abstract val isFinished: Boolean

@@ -1,6 +1,7 @@
 package jcinterpret.core
 
 import jcinterpret.core.ctx.ExecutionContext
+import jcinterpret.core.trace.ExecutionTrace
 
 class JavaConcolicInterpreter internal constructor (
     private val contexts: MutableList<ExecutionContext>

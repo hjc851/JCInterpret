@@ -2,10 +2,10 @@ package jcinterpret.core.memory.heap
 
 import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.memory.stack.StackValue
-import jcinterpret.core.signature.ArrayTypeSignature
-import jcinterpret.core.signature.ClassTypeSignature
-import jcinterpret.core.signature.ReferenceTypeSignature
-import jcinterpret.core.signature.TypeSignature
+import jcinterpret.signature.ArrayTypeSignature
+import jcinterpret.signature.ClassTypeSignature
+import jcinterpret.signature.ReferenceTypeSignature
+import jcinterpret.signature.TypeSignature
 
 abstract class ObjectType (
     override val id: Int,

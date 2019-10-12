@@ -1,8 +1,8 @@
 package jcinterpret.core.memory.heap
 
 import jcinterpret.core.memory.stack.StackReference
-import jcinterpret.core.signature.ClassTypeSignature
-import jcinterpret.core.signature.ReferenceTypeSignature
+import jcinterpret.signature.ClassTypeSignature
+import jcinterpret.signature.ReferenceTypeSignature
 
 abstract class HeapValue {
     abstract val id: Int

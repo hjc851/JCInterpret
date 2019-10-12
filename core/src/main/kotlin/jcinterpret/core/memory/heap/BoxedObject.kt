@@ -2,8 +2,8 @@ package jcinterpret.core.memory.heap
 
 import jcinterpret.core.memory.stack.StackValue
 import jcinterpret.core.memory.stack.SymbolicValue
-import jcinterpret.core.signature.ClassTypeSignature
-import jcinterpret.core.signature.TypeSignature
+import jcinterpret.signature.ClassTypeSignature
+import jcinterpret.signature.TypeSignature
 
 abstract class BoxedObject<T> (
     id: Int,

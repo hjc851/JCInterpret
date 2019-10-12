@@ -2,9 +2,8 @@ package jcinterpret.core.control
 
 import jcinterpret.core.memory.stack.StackReference
 import jcinterpret.core.memory.stack.StackValue
-import jcinterpret.core.signature.ClassTypeSignature
-import jcinterpret.core.signature.QualifiedMethodSignature
-import jcinterpret.core.signature.TypeSignature
+import jcinterpret.signature.ClassTypeSignature
+import jcinterpret.signature.QualifiedMethodSignature
 
 abstract class JCException: Exception()
 

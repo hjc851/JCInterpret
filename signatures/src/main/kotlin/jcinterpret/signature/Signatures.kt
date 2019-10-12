@@ -1,4 +1,4 @@
-package jcinterpret.core.signature
+package jcinterpret.signature
 
 import java.io.Serializable
 
