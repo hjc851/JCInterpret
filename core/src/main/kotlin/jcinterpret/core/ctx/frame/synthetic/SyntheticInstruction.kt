@@ -4,45 +4,14 @@ import jcinterpret.core.control.ClassAreaFault
 import jcinterpret.core.control.HaltException
 import jcinterpret.core.control.ReturnException
 import jcinterpret.core.ctx.ExecutionContext
+import jcinterpret.core.ctx.frame.Instruction
 import jcinterpret.core.memory.heap.ObjectType
 import jcinterpret.core.memory.stack.StackReference
 import jcinterpret.core.trace.TracerRecord
 import jcinterpret.signature.*
 
-abstract class SyntheticInstruction {
+abstract class SyntheticInstruction: Instruction() {
     abstract fun execute(ctx: ExecutionContext, frame: SyntheticExecutionFrame)
-
-    fun validateSignatures(ctx: ExecutionContext, vararg signatures: Signature) {
-        val unloaded = mutableSetOf<ClassTypeSignature>()
-
-        fun validate(sig: Signature) {
-            when (sig) {
-                is ClassTypeSignature -> if (!ctx.classArea.isClassLoaded(sig))
-                    unloaded.add(sig)
-
-                is ArrayTypeSignature -> validate(sig.componentType)
-
-                is QualifiedMethodSignature -> {
-                    validate(sig.declaringClassSignature)
-                    validate(sig.methodSignature)
-                }
-
-                is MethodSignature -> validate(sig.typeSignature)
-
-                is MethodTypeSignature -> {
-                    validate(sig.returnType)
-                    for (arg in sig.argumentTypes)
-                        validate(arg)
-                }
-            }
-        }
-
-        for (sig in signatures)
-            validate(sig)
-
-        if (unloaded.isNotEmpty())
-            throw ClassAreaFault(unloaded)
-    }
 }
 
 //
@@ -124,7 +93,7 @@ class AllocateSymbolic(val type: TypeSignature): SyntheticInstruction() {
 
 class ValidateClassDependencies(val sig: ClassTypeSignature) : SyntheticInstruction() {
     override fun execute(ctx: ExecutionContext, frame: SyntheticExecutionFrame) {
-        val desc = ctx.library.getDescriptor(sig)
+        val desc = ctx.descriptorLibrary.getDescriptor(sig)
         val sigs = mutableSetOf<Signature>()
 
         if (desc.superclass != null)
@@ -153,7 +122,7 @@ class ValidateClassDependencies(val sig: ClassTypeSignature) : SyntheticInstruct
 
 class AllocateClassType(val sig: ClassTypeSignature) : SyntheticInstruction() {
     override fun execute(ctx: ExecutionContext, frame: SyntheticExecutionFrame) {
-        val desc = ctx.library.getDescriptor(sig)
+        val desc = ctx.descriptorLibrary.getDescriptor(sig)
         ctx.classArea.allocateClassType(ctx, desc)
     }
 }

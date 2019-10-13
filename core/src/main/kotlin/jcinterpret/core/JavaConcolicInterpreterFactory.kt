@@ -9,20 +9,23 @@ import jcinterpret.core.ctx.meta.NativeArea
 import jcinterpret.core.descriptors.DescriptorLibrary
 import jcinterpret.core.memory.stack.StackReference
 import jcinterpret.core.memory.stack.StackValue
+import jcinterpret.core.source.SourceLibrary
 import jcinterpret.core.trace.TracerRecord
 import jcinterpret.signature.QualifiedMethodSignature
 import java.util.*
+import java.util.concurrent.atomic.AtomicInteger
 
 object JavaConcolicInterpreterFactory {
     fun build (
         entryPoint: QualifiedMethodSignature,
-        library: DescriptorLibrary
+        descLibrary: DescriptorLibrary,
+        srcLibrary: SourceLibrary
     ): JavaConcolicInterpreter {
 
         val contexts = mutableListOf<ExecutionContext>()
         val interpreter = JavaConcolicInterpreter(contexts)
 
-        val ctx: ExecutionContext = buildExecutionContext(entryPoint, library, interpreter)
+        val ctx: ExecutionContext = buildExecutionContext(entryPoint, descLibrary, srcLibrary, interpreter)
         contexts.add(ctx)
 
         return interpreter
@@ -30,11 +33,12 @@ object JavaConcolicInterpreterFactory {
 
     private fun buildExecutionContext (
         entryPoint: QualifiedMethodSignature,
-        library: DescriptorLibrary,
+        descLibrary: DescriptorLibrary,
+        srcLibrary: SourceLibrary,
         interpreter: JavaConcolicInterpreter
     ): ExecutionContext {
 
-        val methodDescriptor = library.getDescriptor(entryPoint)
+        val methodDescriptor = descLibrary.getDescriptor(entryPoint)
 
         val instructions = Stack<SyntheticInstruction>()
         val operands = Stack<StackValue>()
@@ -67,9 +71,10 @@ object JavaConcolicInterpreterFactory {
         return ExecutionContext (
             interpreter,
             mutableListOf(),
-            library,
-            HeapArea(),
-            ClassArea(),
+            descLibrary,
+            srcLibrary,
+            HeapArea(AtomicInteger(1), mutableMapOf(), mutableMapOf()),
+            ClassArea(mutableMapOf()),
             NativeArea(),
             frames
         )

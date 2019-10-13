@@ -39,7 +39,7 @@ class ClassArea (
 
         val staticFields = cls.fields.values
             .filter { it.isStatic }
-            .map { it.name to Field(it.name, it.type, ctx.library.getDescriptor(it.type).defaultValue) }
+            .map { it.name to Field(it.name, it.type, ctx.descriptorLibrary.getDescriptor(it.type).defaultValue) }
             .toMap().toMutableMap()
 
         val staticMethods = cls.methods.values

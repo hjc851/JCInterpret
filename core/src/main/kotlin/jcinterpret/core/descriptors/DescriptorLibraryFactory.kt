@@ -10,7 +10,7 @@ object DescriptorLibraryFactory {
     ): DescriptorLibrary {
         return DescriptorLibrary (
             listOf(
-                CompilationUnitDescriptorResolver(compilationUnits),
+                BindingDescriptorResolver(compilationUnits),
                 ClassFileDescriptorResolver(libs)
             )
         )

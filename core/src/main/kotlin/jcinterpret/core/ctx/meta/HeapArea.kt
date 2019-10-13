@@ -36,7 +36,7 @@ class HeapArea (
     }
 
     fun allocateSymbol(ctx: ExecutionContext, type: PrimitiveTypeSignature): SymbolicValue {
-        val desc = ctx.library.getDescriptor(type)
+        val desc = ctx.descriptorLibrary.getDescriptor(type)
         return SymbolicValue(counter.getAndIncrement(), desc.stackType)
     }
 
@@ -126,6 +126,6 @@ class HeapArea (
     //  Deref
     //
 
-    fun dereference(selfref: StackReference): HeapValue = dereference(selfref.id)
-    fun dereference(id: Int): HeapValue = TODO()
+    fun dereference(ref: StackReference): HeapValue = dereference(ref.id)
+    fun dereference(id: Int): HeapValue = storage[id]!!
 }

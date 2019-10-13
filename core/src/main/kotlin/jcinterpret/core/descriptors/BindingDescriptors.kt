@@ -8,7 +8,7 @@ import org.eclipse.jdt.core.dom.ITypeBinding
 import org.eclipse.jdt.core.dom.IVariableBinding
 import org.eclipse.jdt.core.dom.Modifier
 
-class JDTClassTypeDescriptor (
+class TypeBindingClassTypeDescriptor (
     val binding: ITypeBinding
 ): ClassTypeDescriptor() {
     override val signature: ClassTypeSignature
@@ -35,12 +35,12 @@ class JDTClassTypeDescriptor (
         this.innerclasses = binding.declaredTypes.map { it.signature() as ClassTypeSignature }
         this.enclosingMethod = binding.declaringMethod?.qualifiedSignature()
 
-        this.fields = binding.declaredFields.map { it.name to JDTFieldDescriptor(it) }.toMap()
-        this.methods = binding.declaredMethods.map { it.signature().toString() to JDTMethodDescriptor(it) }.toMap()
+        this.fields = binding.declaredFields.map { it.name to VariableBindingFieldDescriptor(it) }.toMap()
+        this.methods = binding.declaredMethods.map { it.signature().toString() to MethodBindingMethodDescriptor(it) }.toMap()
     }
 }
 
-class JDTMethodDescriptor (
+class MethodBindingMethodDescriptor (
     val binding: IMethodBinding
 ): MethodDescriptor() {
     override val qualifiedSignature: QualifiedMethodSignature
@@ -62,7 +62,7 @@ class JDTMethodDescriptor (
     }
 }
 
-class JDTFieldDescriptor (
+class VariableBindingFieldDescriptor (
     val binding: IVariableBinding
 ): FieldDescriptor() {
     override val name: String

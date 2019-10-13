@@ -25,23 +25,36 @@ class ClassFileClassTypeDescriptor (
         this.signature = ClassTypeSignature(cf.name)
 
         this.superclass = if (cf.super_class > 0) ClassTypeSignature(cf.superclassName) else null
-        this.interfaces = cf.interfaces.map { ClassTypeSignature(cf.getInterfaceName(it)) }
+        this.interfaces = cf.interfaces.map { ClassTypeSignature(cf.constant_pool.getClassInfo(it).name) }
 
         val ica = cf.attributes["InnerClasses"] as? InnerClasses_attribute
         if (ica != null) {
-            this.innerclasses = TODO()
+            this.innerclasses = ica.classes.map { it.getInnerClassInfo(cf.constant_pool) }
+                .map { ClassTypeSignature(it.name) }
         } else {
             this.innerclasses = emptyList()
         }
 
-        if (signature.className.contains("$"))
-            this.outerclass = TODO()
-        else
+        if (signature.className.contains("$")) {
+            val name = signature.className
+            val lastSep = name.lastIndexOf('$')
+            val outerName = name.substring(0, lastSep)
+            this.outerclass = ClassTypeSignature(outerName)
+        } else {
             this.outerclass = null
+        }
 
         val ema = cf.attributes["EnclosingMethod"] as? EnclosingMethod_attribute
-        if (ema != null) {
-            this.innerclasses = TODO()
+        if (ema != null && ema.method_index > 0) {
+            val className = ema.getClassName(cf.constant_pool)
+            val nameAndType = cf.constant_pool.getNameAndTypeInfo(ema.method_index)
+            val methodName = nameAndType.name
+            val methodType = nameAndType.type
+
+            val sigStr = "L$className;$methodName$methodType"
+            val sig = SignatureParser(sigStr).parseQualifiedMethodSignature()
+
+            this.enclosingMethod = sig
         } else {
             this.enclosingMethod = null
         }

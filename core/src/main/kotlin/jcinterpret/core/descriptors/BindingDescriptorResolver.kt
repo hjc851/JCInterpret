@@ -5,18 +5,18 @@ import jcinterpret.signature.QualifiedMethodSignature
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration
 import org.eclipse.jdt.core.dom.CompilationUnit
 
-class CompilationUnitDescriptorResolver (
-    val compilationUnits: List<CompilationUnit>
+class BindingDescriptorResolver (
+    compilationUnits: List<CompilationUnit>
 ): DescriptorResolver() {
 
-    private val classes = mutableMapOf<ClassTypeSignature, JDTClassTypeDescriptor>()
+    private val classes = mutableMapOf<ClassTypeSignature, TypeBindingClassTypeDescriptor>()
 
     init {
         for (cu in compilationUnits) {
             for (type in cu.types()) {
                 type as AbstractTypeDeclaration
 
-                val desc = JDTClassTypeDescriptor(type.resolveBinding())
+                val desc = TypeBindingClassTypeDescriptor(type.resolveBinding())
                 classes[desc.signature] = desc
             }
         }

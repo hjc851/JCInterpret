@@ -8,6 +8,7 @@ import jcinterpret.core.ctx.meta.ClassArea
 import jcinterpret.core.ctx.meta.HeapArea
 import jcinterpret.core.ctx.meta.NativeArea
 import jcinterpret.core.descriptors.DescriptorLibrary
+import jcinterpret.core.source.SourceLibrary
 import jcinterpret.core.trace.ExecutionTrace
 import jcinterpret.core.trace.TracerRecord
 import jcinterpret.signature.QualifiedMethodSignature
@@ -16,7 +17,8 @@ import java.util.*
 class ExecutionContext (
     val interpreter: JavaConcolicInterpreter,
     val records: MutableList<TracerRecord>,
-    val library: DescriptorLibrary,
+    val descriptorLibrary: DescriptorLibrary,
+    val sourceLibrary: SourceLibrary,
     val heapArea: HeapArea,
     val classArea: ClassArea,
     val nativeArea: NativeArea,

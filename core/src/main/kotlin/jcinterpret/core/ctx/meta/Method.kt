@@ -1,61 +1,69 @@
 package jcinterpret.core.ctx.meta
 
 import jcinterpret.core.ctx.ExecutionContext
+import jcinterpret.core.ctx.frame.interpreted.*
 import jcinterpret.core.descriptors.MethodDescriptor
 import jcinterpret.core.memory.stack.StackReference
 import jcinterpret.core.memory.stack.StackValue
 import jcinterpret.core.trace.TracerRecord
 import jcinterpret.signature.PrimitiveTypeSignature
 import jcinterpret.signature.QualifiedMethodSignature
+import jcinterpret.signature.ReferenceTypeSignature
+import org.eclipse.jdt.core.dom.BodyDeclaration
+import org.eclipse.jdt.core.dom.MethodDeclaration
+import org.eclipse.jdt.core.dom.SingleVariableDeclaration
+import java.util.*
 
-abstract class Method(val sig: QualifiedMethodSignature) {
+abstract class Method(val desc: MethodDescriptor) {
+
+    val sig: QualifiedMethodSignature
+        get() = desc.qualifiedSignature
+
     abstract fun invoke(ctx: ExecutionContext, selfRef: StackReference?, params: Array<StackValue>)
 }
 
-class InterpretedMethod(val desc: MethodDescriptor, sig: QualifiedMethodSignature): Method(sig) {
+class InterpretedMethod(desc: MethodDescriptor, val decl: MethodDeclaration): Method(desc) {
     override fun invoke(ctx: ExecutionContext, selfRef: StackReference?, params: Array<StackValue>) {
 
-        TODO()
+        val instructions = Stack<InterpretedInstruction>()
+        val operands = Stack<StackValue>()
+        val locals = Locals()
+        val exceptionScopes = Stack<ExceptionScope>()
+        val breakScopes = Stack<BreakScope>()
 
-//        val decl = ctx.resolver.ctx.declarations.getMethod(sig.toString())
-//
-//        val instructions = Stack<InterpretedInstruction>()
-//        val operands = Stack<StackValue>()
-//        val locals = Locals()
-//        val exceptionScopes = Stack<ExceptionScope>()
-//        val breakScopes = Stack<Pair<String?, Int>>()
-//
-//        if (!desc.isStatic) {
-//            locals.allocate("this", desc.declaringClass.signature)
-//            locals.assign("this", selfRef!!)
-//        }
-//
-//        for (i in 0 until params.size) {
-//            val declaredParameter = decl.parameters()[i] as SingleVariableDeclaration
-//            val name = declaredParameter.name.identifier
-//
-//            val ptype = sig.methodSignature.typeSignature.argumentTypes[i]
-//            val param = params[i]
-//
-//            if (ptype is PrimitiveTypeSignature && param is StackReference ||
-//                ptype is ReferenceTypeSignature && param !is StackReference)
-//                TODO("Handle boxing")
-//
-//            if (declaredParameter.isVarargs)
-//                TODO("Varargs - make array of (i until params.size) + break")
-//
-//            locals.allocate(name, ptype)
-//            locals.assign(name, param)
-//        }
-//
-//        instructions.push(decode_stmt(decl.body))
-//
-//        val frame = InterpretedExecutionContextFrame(instructions, operands, locals, exceptionScopes, breakScopes, desc)
-//        ctx.frames.push(frame)
+        if (!desc.isStatic) {
+            val thistype = ctx.descriptorLibrary.getDescriptor(sig.declaringClassSignature)
+            locals.allocate("this", thistype)
+            locals.assign("this", selfRef!!)
+        }
+
+        for (i in 0 until params.size) {
+            val declaredParameter = decl.parameters()[i] as SingleVariableDeclaration
+            val name = declaredParameter.name.identifier
+
+            val ptype = sig.methodSignature.typeSignature.argumentTypes[i]
+            val param = params[i]
+
+            if (ptype is PrimitiveTypeSignature && param is StackReference ||
+                ptype is ReferenceTypeSignature && param !is StackReference)
+                TODO("Handle boxing")
+
+            if (declaredParameter.isVarargs)
+                TODO("Varargs - make array of (i until params.size) + break")
+
+            val pdesc = ctx.descriptorLibrary.getDescriptor(ptype)
+            locals.allocate(name, pdesc)
+            locals.assign(name, param)
+        }
+
+        instructions.push(decode_stmt(decl.body))
+
+        val frame = InterpretedExecutionFrame(instructions, operands, locals, exceptionScopes, breakScopes, desc)
+        ctx.frames.push(frame)
     }
 }
 
-class OpaqueMethod(val desc: MethodDescriptor, sig: QualifiedMethodSignature): Method(sig) {
+class OpaqueMethod(desc: MethodDescriptor): Method(desc) {
     override fun invoke(ctx: ExecutionContext, selfRef: StackReference?, params: Array<StackValue>) {
 
         if (desc.isStatic && selfRef != null)
