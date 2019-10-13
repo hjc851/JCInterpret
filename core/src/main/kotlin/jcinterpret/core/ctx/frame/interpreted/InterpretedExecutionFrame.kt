@@ -17,6 +17,9 @@ class InterpretedExecutionFrame (
     val breaks: List<BreakScope>,
     val desc: MethodDescriptor
 ): MethodBoundExecutionFrame() {
+
+    val decoder = ASTDecoder(this)
+
     override val method: QualifiedMethodSignature
         get() = desc.qualifiedSignature
 

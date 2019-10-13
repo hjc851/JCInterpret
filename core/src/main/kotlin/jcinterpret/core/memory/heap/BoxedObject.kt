@@ -29,8 +29,8 @@ class BoxedStackValueObject (
 //
 
 abstract class StringValue
-data class ConcreteStringValue(val value: String)
-data class SymbolicStringValue(val value: SymbolicValue)
+data class ConcreteStringValue(val value: String): StringValue()
+data class SymbolicStringValue(val value: SymbolicValue): StringValue()
 
 class BoxedStringObject (
     id: Int,

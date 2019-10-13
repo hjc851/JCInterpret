@@ -76,18 +76,19 @@ class HeapArea (
         TODO()
     }
 
-    fun getOrAllocateString(value: String): BoxedStringObject {
-//        var id = literalCache[value]
-//
-//        if (id == null) {
-//            val value = ConcreteStringValue(value)
-//            val obj = StringObject(counter.getAndIncrement(), value)
-//            id = obj.id
-//            storage[id] = obj
-//        }
-//
-//        return storage[id] as StringObject
-        TODO()
+    fun getOrAllocateString(str: String): BoxedStringObject {
+        var id = literalRefs[str]
+
+        if (id == null) {
+            val value = ConcreteStringValue(str)
+            val obj = BoxedStringObject(counter.getAndIncrement(), ClassTypeSignature("java/lang/String"), value)
+            id = obj.id
+
+            literalRefs[str] = id
+            storage[id] = obj
+        }
+
+        return storage[id] as BoxedStringObject
     }
 
     private fun allocateSymbolicString(ctx: ExecutionContext): BoxedStringObject {
