@@ -6,15 +6,17 @@ import jcinterpret.core.ctx.frame.MethodBoundExecutionFrame
 import jcinterpret.core.ctx.frame.synthetic.ReturnVoid
 import jcinterpret.core.descriptors.MethodDescriptor
 import jcinterpret.core.memory.stack.StackValue
+import jcinterpret.signature.ClassTypeSignature
 import jcinterpret.signature.QualifiedMethodSignature
+import org.eclipse.jdt.core.dom.Block
 import java.util.*
 
 class InterpretedExecutionFrame (
     val instructions: Stack<InterpretedInstruction>,
     val operands: Stack<StackValue>,
     val locals: Locals,
-    val exceptions: List<ExceptionScope>,
-    val breaks: List<BreakScope>,
+    val exceptions: Stack<ExceptionScope>,
+    val breaks: Stack<BreakScope>,
     val desc: MethodDescriptor
 ): MethodBoundExecutionFrame() {
 
@@ -58,6 +60,14 @@ class InterpretedExecutionFrame (
     }
 }
 
-class ExceptionScope
+class ExceptionScope (
+    val handles: List<ExceptionHandle>
+)
+
+class ExceptionHandle (
+    val name: String,
+    val type: ClassTypeSignature,
+    val handle: Block
+)
 
 class BreakScope

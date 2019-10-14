@@ -7,6 +7,7 @@ import jcinterpret.core.ctx.frame.synthetic.SyntheticInstruction
 import jcinterpret.core.ctx.frame.synthetic.ValidateClassDependencies
 import jcinterpret.core.descriptors.ClassTypeDescriptor
 import jcinterpret.core.memory.heap.Field
+import jcinterpret.signature.ArrayTypeSignature
 import jcinterpret.signature.ClassTypeSignature
 import jcinterpret.signature.TypeSignature
 import java.util.*
@@ -57,6 +58,29 @@ class ClassArea (
     }
 
     fun castWillSucceed(from: TypeSignature, to: TypeSignature): Boolean {
+
+        if (from.toString() == to.toString()) return true
+
+        if (from is ClassTypeSignature && to is ClassTypeSignature) {
+
+            val fromCls = getClass(from)
+            val toCls = getClass(to)
+
+            return fromCls.isAssignableTo(toCls)
+        }
+
+        if (from is ClassTypeSignature && to is ArrayTypeSignature) {
+            return false
+        }
+
+        if (from is ArrayTypeSignature && to is ClassTypeSignature) {
+            return to.className == "java/lang/Object"
+        }
+
+        if (from is ArrayTypeSignature && to is ArrayTypeSignature) {
+            return to.toString() == "[Ljava/lang/Object"
+        }
+
         TODO()
     }
 }

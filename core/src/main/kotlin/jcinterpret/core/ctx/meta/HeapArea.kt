@@ -42,15 +42,14 @@ class HeapArea (
 
     fun allocateSymbolicObject(ctx: ExecutionContext, type: ClassTypeSignature): ObjectType {
         val obj = when {
-            type == BoxedTypeSignature.VOID -> allocateSymbolicBoxedObject(ctx, type, PrimitiveTypeSignature.VOID)
-            type == BoxedTypeSignature.CHARACTER -> allocateSymbolicBoxedObject(ctx, type, PrimitiveTypeSignature.CHAR)
-            type == BoxedTypeSignature.BOOLEAN -> allocateSymbolicBoxedObject(ctx, type, PrimitiveTypeSignature.BOOLEAN)
-            type == BoxedTypeSignature.BYTE -> allocateSymbolicBoxedObject(ctx, type, PrimitiveTypeSignature.BYTE)
-            type == BoxedTypeSignature.SHORT -> allocateSymbolicBoxedObject(ctx, type, PrimitiveTypeSignature.SHORT)
-            type == BoxedTypeSignature.INTEGER -> allocateSymbolicBoxedObject(ctx, type, PrimitiveTypeSignature.INT)
-            type == BoxedTypeSignature.LONG -> allocateSymbolicBoxedObject(ctx, type, PrimitiveTypeSignature.LONG)
-            type == BoxedTypeSignature.FLOAT -> allocateSymbolicBoxedObject(ctx, type, PrimitiveTypeSignature.FLOAT)
-            type == BoxedTypeSignature.DOUBLE -> allocateSymbolicBoxedObject(ctx, type, PrimitiveTypeSignature.DOUBLE)
+            type == BoxedTypeSignature.CHARACTER    -> allocateSymbolicBoxedObject(ctx, type, PrimitiveTypeSignature.CHAR)
+            type == BoxedTypeSignature.BOOLEAN      -> allocateSymbolicBoxedObject(ctx, type, PrimitiveTypeSignature.BOOLEAN)
+            type == BoxedTypeSignature.BYTE         -> allocateSymbolicBoxedObject(ctx, type, PrimitiveTypeSignature.BYTE)
+            type == BoxedTypeSignature.SHORT        -> allocateSymbolicBoxedObject(ctx, type, PrimitiveTypeSignature.SHORT)
+            type == BoxedTypeSignature.INTEGER      -> allocateSymbolicBoxedObject(ctx, type, PrimitiveTypeSignature.INT)
+            type == BoxedTypeSignature.LONG         -> allocateSymbolicBoxedObject(ctx, type, PrimitiveTypeSignature.LONG)
+            type == BoxedTypeSignature.FLOAT        -> allocateSymbolicBoxedObject(ctx, type, PrimitiveTypeSignature.FLOAT)
+            type == BoxedTypeSignature.DOUBLE       -> allocateSymbolicBoxedObject(ctx, type, PrimitiveTypeSignature.DOUBLE)
 
             type.className == "java/lang/String"    -> allocateSymbolicString(ctx)
 
@@ -62,18 +61,16 @@ class HeapArea (
     }
 
     fun allocateSymbolicArray(ctx: ExecutionContext, type: ArrayTypeSignature): SymbolicArray {
-//        val id = counter.getAndIncrement()
-//        val arr = SymbolicArray(id, type, mutableMapOf(), allocateSymbol(ctx, PrimitiveTypeSignature.INT))
-//        storage[id] = arr
-//        return arr
-        TODO()
+        val id = counter.getAndIncrement()
+        val arr = SymbolicArray(id, type, mutableMapOf(), allocateSymbol(ctx, PrimitiveTypeSignature.INT))
+        storage[id] = arr
+        return arr
     }
 
     private fun allocateSymbolicBoxedObject(ctx: ExecutionContext, objType: ClassTypeSignature, type: PrimitiveTypeSignature): BoxedStackValueObject {
-//        val symbol = allocateSymbol(ctx, type)
-//        val obj = BoxedStackValue(counter.getAndIncrement(), objType, symbol)
-//        return obj
-        TODO()
+        val symbol = allocateSymbol(ctx, type)
+        val obj = BoxedStackValueObject(counter.getAndIncrement(), objType, symbol)
+        return obj
     }
 
     fun getOrAllocateString(str: String): BoxedStringObject {
@@ -92,8 +89,13 @@ class HeapArea (
     }
 
     private fun allocateSymbolicString(ctx: ExecutionContext): BoxedStringObject {
-//        return StringObject(counter.getAndIncrement(), SymbolicStringValue(counter.getAndIncrement()))
-        TODO()
+        val id = counter.getAndIncrement()
+        val value = SymbolicStringValue(counter.getAndIncrement())
+
+        val obj = BoxedStringObject(id, ClassTypeSignature("java/lang/String"), value)
+        storage[id] = obj
+
+        return obj
     }
 
     //
@@ -101,26 +103,37 @@ class HeapArea (
     //
 
     fun allocateObject(ctx: ExecutionContext, type: ClassTypeSignature): ConcreteObject {
-//        val cls = ctx.classArea.getClass(type)
-//        val fields = mutableListOf<Field>()
-//
-//        var currentClass: ClassTypeDescriptor? = cls.descriptor
-//        while (currentClass != null) {
-//            val currentClassSignature = currentClass.signature
-//            currentClass.fields.values
-//                .filter { !it.isStatic }
-//                .map { Field(currentClassSignature, it.name, it.type, false, it.type.defaultValue) }
-//                .toCollection(fields)
-//
-//            currentClass = currentClass.superclass
-//        }
-//
-//        val fieldStorage = fields.map { it.name to it }.toMap()
-//        val id = counter.getAndIncrement()
-//        val obj = ConcreteObject(id, type, fieldStorage)
-//        storage[id] = obj
-//        return obj
-        TODO()
+        val id = counter.getAndIncrement()
+        val obj = ConcreteObject(id, type, mutableMapOf())
+        storage[id] = obj
+        return obj
+    }
+
+    fun promote(ctx: ExecutionContext, value: StackReference, type: ReferenceTypeSignature) {
+
+        val id = value.id
+        val existing = storage[id]!! as ObjectType
+
+        val obj = when {
+            type == BoxedTypeSignature.CHARACTER    -> BoxedStackValueObject(id, type as ClassTypeSignature, allocateSymbol(ctx, PrimitiveTypeSignature.CHAR))
+            type == BoxedTypeSignature.BOOLEAN      -> BoxedStackValueObject(id, type as ClassTypeSignature, allocateSymbol(ctx, PrimitiveTypeSignature.BOOLEAN))
+            type == BoxedTypeSignature.BYTE         -> BoxedStackValueObject(id, type as ClassTypeSignature, allocateSymbol(ctx, PrimitiveTypeSignature.BYTE))
+            type == BoxedTypeSignature.SHORT        -> BoxedStackValueObject(id, type as ClassTypeSignature, allocateSymbol(ctx, PrimitiveTypeSignature.SHORT))
+            type == BoxedTypeSignature.INTEGER      -> BoxedStackValueObject(id, type as ClassTypeSignature, allocateSymbol(ctx, PrimitiveTypeSignature.INT))
+            type == BoxedTypeSignature.LONG         -> BoxedStackValueObject(id, type as ClassTypeSignature, allocateSymbol(ctx, PrimitiveTypeSignature.LONG))
+            type == BoxedTypeSignature.FLOAT        -> BoxedStackValueObject(id, type as ClassTypeSignature, allocateSymbol(ctx, PrimitiveTypeSignature.FLOAT))
+            type == BoxedTypeSignature.DOUBLE       -> BoxedStackValueObject(id, type as ClassTypeSignature, allocateSymbol(ctx, PrimitiveTypeSignature.DOUBLE))
+
+            type.toString() == ("Ljava/lang/String;")    -> BoxedStringObject(id, type as ClassTypeSignature, SymbolicStringValue(counter.getAndIncrement()))
+
+            type is ArrayTypeSignature -> SymbolicArray(id, type, mutableMapOf(), allocateSymbol(ctx, PrimitiveTypeSignature.INT))
+            type is ClassTypeSignature -> TODO()
+
+            else -> TODO()
+        }
+
+        existing.fields.toMap(obj.fields)
+        storage[id] = obj
     }
 
     //

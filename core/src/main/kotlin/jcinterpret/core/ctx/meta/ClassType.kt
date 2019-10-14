@@ -64,6 +64,15 @@ class ClassType(
     }
 
     fun isAssignableTo(type: ClassType): Boolean {
+
+        val superCls = descriptor.superclass?.let { classArea.getClass(it) }
+
+        for (iface in descriptor.interfaces) {
+            val ifaceCls = classArea.getClass(iface)
+
+            Unit
+        }
+
         TODO()
     }
 }

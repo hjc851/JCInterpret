@@ -1,5 +1,6 @@
 package jcinterpret.core.memory.heap
 
+import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.memory.stack.StackValue
 import jcinterpret.core.memory.stack.SymbolicValue
 import jcinterpret.signature.ClassTypeSignature
@@ -9,7 +10,11 @@ abstract class BoxedObject<T> (
     id: Int,
     type: ClassTypeSignature,
     value: T
-): ObjectType(id, type, mutableMapOf())
+): ObjectType(id, type, mutableMapOf()) {
+    override fun getField(name: String, type: TypeSignature, ctx: ExecutionContext): Field {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+}
 
 //
 //  Stack Values
@@ -30,7 +35,7 @@ class BoxedStackValueObject (
 
 abstract class StringValue
 data class ConcreteStringValue(val value: String): StringValue()
-data class SymbolicStringValue(val value: SymbolicValue): StringValue()
+data class SymbolicStringValue(val value: Int): StringValue()
 
 class BoxedStringObject (
     id: Int,
