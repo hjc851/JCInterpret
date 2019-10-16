@@ -23,7 +23,7 @@ abstract class Method(val desc: MethodDescriptor) {
     abstract fun invoke(ctx: ExecutionContext, selfRef: ReferenceValue?, params: Array<StackValue>)
 }
 
-val MAX_RECURSIVE_CALL_COUNT = 5
+val MAX_RECURSIVE_CALL_COUNT = 1
 
 class InterpretedMethod(desc: MethodDescriptor, val decl: MethodDeclaration): Method(desc) {
     override fun invoke(ctx: ExecutionContext, selfRef: ReferenceValue?, params: Array<StackValue>) {

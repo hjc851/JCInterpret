@@ -36,7 +36,7 @@ object ExecutionContextCloner {
         )
     }
 
-    private fun clone(oldHeap: HeapArea): HeapArea {
+    fun clone(oldHeap: HeapArea): HeapArea {
         val counter = AtomicInteger(oldHeap.counter.get())
         val storage = oldHeap.storage.map { it.key to clone(it.value) }.toMap().toMutableMap()
         val literalRefs = oldHeap.literalRefs.toMutableMap()
@@ -44,7 +44,7 @@ object ExecutionContextCloner {
         return HeapArea(counter, storage, literalRefs)
     }
 
-    private fun clone(value: HeapValue): HeapValue {
+    fun clone(value: HeapValue): HeapValue {
 
         val obj = when (value.javaClass) {
             ConcreteObject::class.java -> {
@@ -112,7 +112,7 @@ object ExecutionContextCloner {
         return obj
     }
 
-    private fun clone(oldClassArea: ClassArea): ClassArea {
+    fun clone(oldClassArea: ClassArea): ClassArea {
         val classes = mutableMapOf<String, ClassType>()
         val ca = ClassArea(classes)
         oldClassArea.classes.map { it.key to clone(it.value, ca) }.toMap(classes)
@@ -120,7 +120,7 @@ object ExecutionContextCloner {
         return ca
     }
 
-    private fun clone(ct: ClassType, ca: ClassArea): ClassType {
+    fun clone(ct: ClassType, ca: ClassArea): ClassType {
         val desc = ct.descriptor
         val staticFields = ct.staticFields.map { it.key to it.value.copy() }.toMap().toMutableMap()
         val staticMethods = ct.staticMethods.toMutableMap()
@@ -129,7 +129,7 @@ object ExecutionContextCloner {
         return ClassType(ca, desc, staticFields, staticMethods, virtualMethods)
     }
 
-    private fun clone(oldFrames: Stack<ExecutionFrame>): Stack<ExecutionFrame> {
+    fun clone(oldFrames: Stack<ExecutionFrame>): Stack<ExecutionFrame> {
         val newStack = Stack<ExecutionFrame>()
 
         for (frame in oldFrames)
@@ -138,7 +138,7 @@ object ExecutionContextCloner {
         return newStack
     }
 
-    private fun clone(oldFrame: ExecutionFrame): ExecutionFrame {
+    fun clone(oldFrame: ExecutionFrame): ExecutionFrame {
         val frame = when (oldFrame) {
             is SyntheticExecutionFrame -> {
                 SyntheticExecutionFrame (
@@ -165,7 +165,7 @@ object ExecutionContextCloner {
         return frame
     }
 
-    private fun clone(locals: Locals): Locals {
+    fun clone(locals: Locals): Locals {
         val newScopes = Stack<Locals.Scope>()
 
         var previousScope: Locals.Scope? = null
@@ -178,7 +178,7 @@ object ExecutionContextCloner {
         return Locals(newScopes)
     }
 
-    private fun clone(oldScope: Locals.Scope, parent: Locals.Scope?): Locals.Scope {
+    fun clone(oldScope: Locals.Scope, parent: Locals.Scope?): Locals.Scope {
         val scope = Locals.Scope(
                 parent,
                 oldScope.storage.map { it.key to Locals.Scope.Local(it.value.name, it.value.type, it.value.value) }.toMap().toMutableMap()

@@ -178,7 +178,7 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
     }
 
     override fun visit(node: SwitchCase): Boolean {
-        TODO()
+        return false
     }
 
     //  Try
@@ -187,8 +187,9 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
 
         node.finally?.accept(this)
 
-        val stackSize = frame.instructions.size + 1 // add the scope pop
-        val localsDepth = frame.locals.scopes.size + 1 // add the scope pop
+        val instructionSize = frame.instructions.size
+        val operandsSize = frame.operands.size
+        val localDepth = frame.locals.scopes.size
 
         push(block_pop)
         push(excp_pop)
@@ -206,7 +207,7 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
             )
         }
 
-        push(excp_push(handles, stackSize, localsDepth))
+        push(excp_push(handles, instructionSize, operandsSize, localDepth))
         push(block_push)
 
         return false
@@ -281,6 +282,8 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
     //  Invocation
 
     override fun visit(node: ClassInstanceCreation): Boolean {
+        val binding = node.resolveConstructorBinding()
+
         if (node.anonymousClassDeclaration != null)
             throw IllegalArgumentException("Anonymous classes are not implemented")
 
@@ -288,7 +291,28 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
             throw IllegalArgumentException("Scoped constructor calls not implemented")
 
         push(invoke_special(node.resolveConstructorBinding().qualifiedSignature()))
-        node.arguments().reversed().forEach { add(it as Expression) }
+        if (binding.isVarargs) {
+            val regSize = binding.parameterTypes.size - 1
+
+            for (i in node.arguments().size-1 downTo regSize) {
+                push(arr_store)
+                add(node.arguments()[i] as Expression)
+                push(push(StackInt(i)))
+                push(dup)
+            }
+
+            push(arr_allocate(binding.parameterTypes.last().componentType.signature()))
+
+            node.arguments()
+                .take(regSize)
+                .reversed()
+                .forEach { add(it as Expression) }
+
+        } else {
+            node.arguments()
+                .reversed()
+                .forEach { add(it as Expression) }
+        }
 
         push(dup)
         push(obj_allocate(node.resolveTypeBinding().signature() as ClassTypeSignature))
@@ -343,14 +367,6 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
                 add(node.expression)
             } else {
                 push(load("this"))
-
-//                val thisType = frame.locals.typeOf("this").signature
-//                val declClass = binding.declaringClass.signature()
-//                if (thisType == declClass) {
-//                    push(load("this"))
-//                } else {
-//                    TODO()
-//                }
             }
         }
 
@@ -358,12 +374,72 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
     }
 
     override fun visit(node: SuperMethodInvocation): Boolean {
-        TODO()
+        val binding = node.resolveMethodBinding()
+        val qsig = binding.qualifiedSignature()
+
+        if (binding != binding.methodDeclaration) {
+            if (binding.returnType.signature() !is PrimitiveTypeSignature) {
+                val rsig = binding.returnType.signature()
+                push(cast(rsig))
+            }
+        }
+
+        push(invoke_virtual_super(qsig))
+
+        if (binding.isVarargs) {
+            val regSize = binding.parameterTypes.size - 1
+
+            for (i in node.arguments().size-1 downTo regSize) {
+                push(arr_store)
+                add(node.arguments()[i] as Expression)
+                push(push(StackInt(i)))
+                push(dup)
+            }
+
+            push(arr_allocate(binding.parameterTypes.last().componentType.signature()))
+
+            node.arguments()
+                .take(regSize)
+                .reversed()
+                .forEach { add(it as Expression) }
+
+        } else {
+            node.arguments()
+                .reversed()
+                .forEach { add(it as Expression) }
+        }
+
+        push(load("this"))
+
+        return false
     }
 
     override fun visit(node: ConstructorInvocation): Boolean {
+        val binding = node.resolveConstructorBinding()
+
         push(invoke_special(node.resolveConstructorBinding().qualifiedSignature()))
-        node.arguments().reversed().forEach { add(it as Expression) }
+        if (binding.isVarargs) {
+            val regSize = binding.parameterTypes.size - 1
+
+            for (i in node.arguments().size-1 downTo regSize) {
+                push(arr_store)
+                add(node.arguments()[i] as Expression)
+                push(push(StackInt(i)))
+                push(dup)
+            }
+
+            push(arr_allocate(binding.parameterTypes.last().componentType.signature()))
+
+            node.arguments()
+                .take(regSize)
+                .reversed()
+                .forEach { add(it as Expression) }
+
+        } else {
+            node.arguments()
+                .reversed()
+                .forEach { add(it as Expression) }
+        }
         push(push(load("this")))
 
         return false

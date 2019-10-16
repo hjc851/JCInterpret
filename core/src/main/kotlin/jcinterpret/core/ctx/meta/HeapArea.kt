@@ -3,10 +3,7 @@ package jcinterpret.core.ctx.meta
 import jcinterpret.core.control.HaltException
 import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.memory.heap.*
-import jcinterpret.core.memory.stack.ReferenceValue
-import jcinterpret.core.memory.stack.StackReference
-import jcinterpret.core.memory.stack.StackValue
-import jcinterpret.core.memory.stack.SymbolicValue
+import jcinterpret.core.memory.stack.*
 import jcinterpret.signature.*
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -63,6 +60,36 @@ class HeapArea (
         return obj
     }
 
+    fun getOrBox(value: StackValue): BoxedStackValueObject {
+        var id = literalRefs[value]
+
+        if (id == null) {
+            val type = boxedTypeForStackType(value.type)
+            id = counter.getAndIncrement()
+            val obj = BoxedStackValueObject(id, type, value)
+
+            storage[id] = obj
+            literalRefs[value] = id
+        }
+
+        return storage[id] as BoxedStackValueObject
+    }
+
+    private fun boxedTypeForStackType(type: StackType): ClassTypeSignature {
+        return when (type) {
+            StackType.REFERENCE -> ClassTypeSignature.OBJECT
+            StackType.VOID      -> BoxedTypeSignature.VOID
+            StackType.BYTE      -> BoxedTypeSignature.BYTE
+            StackType.SHORT     -> BoxedTypeSignature.SHORT
+            StackType.INT       -> BoxedTypeSignature.INTEGER
+            StackType.LONG      -> BoxedTypeSignature.LONG
+            StackType.FLOAT     -> BoxedTypeSignature.FLOAT
+            StackType.DOUBLE    -> BoxedTypeSignature.DOUBLE
+            StackType.CHAR      -> BoxedTypeSignature.CHARACTER
+            StackType.BOOLEAN   -> BoxedTypeSignature.BOOLEAN
+        }
+    }
+
     fun allocateSymbolicArray(ctx: ExecutionContext, type: ArrayTypeSignature): SymbolicArray {
         val id = counter.getAndIncrement()
         val arr = SymbolicArray(id, type, mutableMapOf(), allocateSymbol(ctx, PrimitiveTypeSignature.INT))
@@ -92,6 +119,20 @@ class HeapArea (
         return storage[id] as BoxedStringObject
     }
 
+    fun getOrAllocateClassObject(type: TypeSignature): ClassObject {
+        var id = literalRefs[type]
+
+        if (id == null) {
+            id = counter.getAndIncrement()
+            val obj = ClassObject(id, ClassTypeSignature("java/lang/Class"), type)
+
+            storage[id] = obj
+            literalRefs[type] = id
+        }
+
+        return storage[id] as ClassObject
+    }
+
     fun allocateSymbolicString(ctx: ExecutionContext, value: StringValue? = null): BoxedStringObject {
         val id = counter.getAndIncrement()
         val value = value ?: SymbolicStringValue(counter.getAndIncrement())
@@ -103,15 +144,23 @@ class HeapArea (
     }
 
     //
-    //  Objects
+    //  Concrete
     //
 
-    fun allocateObject(ctx: ExecutionContext, type: ClassTypeSignature): ConcreteObject {
+    fun allocateObject(ctx: ExecutionContext, type: ClassTypeSignature): ObjectType {
+
+        if (type.className == "java/lang/String")
+            return getOrAllocateString("")
+
         val id = counter.getAndIncrement()
         val obj = ConcreteObject(id, type, mutableMapOf())
         storage[id] = obj
         return obj
     }
+
+    //
+    //  Promotion
+    //
 
     fun promote(ctx: ExecutionContext, value: StackReference, type: ReferenceTypeSignature) {
 
@@ -128,7 +177,8 @@ class HeapArea (
             type == BoxedTypeSignature.FLOAT        -> BoxedStackValueObject(id, type as ClassTypeSignature, allocateSymbol(ctx, PrimitiveTypeSignature.FLOAT))
             type == BoxedTypeSignature.DOUBLE       -> BoxedStackValueObject(id, type as ClassTypeSignature, allocateSymbol(ctx, PrimitiveTypeSignature.DOUBLE))
 
-            type.toString() == ("Ljava/lang/String;")    -> BoxedStringObject(id, type as ClassTypeSignature, SymbolicStringValue(counter.getAndIncrement()))
+            type.toString() == "Ljava/lang/String;"     -> BoxedStringObject(id, type as ClassTypeSignature, SymbolicStringValue(counter.getAndIncrement()))
+            type.toString() == "Ljava/lang/Class;"      -> TODO()
 
             type is ArrayTypeSignature -> SymbolicArray(id, type, mutableMapOf(), allocateSymbol(ctx, PrimitiveTypeSignature.INT))
 

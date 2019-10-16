@@ -16,8 +16,8 @@ abstract class TracerRecord {
     data class InstanceLibraryMethodCall(val method: QualifiedMethodSignature, val scope: ReferenceValue, val params: Array<StackValue>, val result: StackValue?) : TracerRecord()
 
     data class StaticFieldPut(val staticType: ClassTypeSignature, val field: String, val type: TypeSignature, val oldValue: StackValue, val newValue: StackValue): TracerRecord()
-    data class ObjectFieldPut(val ref: StackReference, val field: String, val type: TypeSignature, val oldValue: StackValue, val newValue: StackValue) : TracerRecord()
-    data class ArrayMemberPut(val ref: StackReference, val index: StackValue, val oldValue: StackValue, val newValue: StackValue) : TracerRecord()
+    data class ObjectFieldPut(val ref: ReferenceValue, val field: String, val type: TypeSignature, val oldValue: StackValue, val newValue: StackValue) : TracerRecord()
+    data class ArrayMemberPut(val ref: ReferenceValue, val index: StackValue, val oldValue: StackValue, val newValue: StackValue) : TracerRecord()
 
     data class StackTransformation(val lhs: StackValue, val rhs: StackValue, val result: StackValue, val operator: BinaryOperator) : TracerRecord()
     data class NotValueTransformation(val input: StackValue, val output: StackValue) : TracerRecord()

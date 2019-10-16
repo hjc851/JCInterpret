@@ -2,6 +2,7 @@ package jcinterpret.core.ctx.frame.interpreted
 
 import jcinterpret.core.ExecutionLogging
 import jcinterpret.core.control.ClassAreaFault
+import jcinterpret.core.control.HaltException
 import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.ctx.frame.MethodBoundExecutionFrame
 import jcinterpret.core.ctx.frame.synthetic.ReturnVoid
@@ -9,6 +10,7 @@ import jcinterpret.core.ctx.frame.synthetic.SyntheticInstruction
 import jcinterpret.core.descriptors.MethodDescriptor
 import jcinterpret.core.memory.stack.StackValue
 import jcinterpret.signature.ClassTypeSignature
+import jcinterpret.signature.PrimitiveTypeSignature
 import jcinterpret.signature.QualifiedMethodSignature
 import org.eclipse.jdt.core.dom.Block
 import java.util.*
@@ -28,8 +30,13 @@ class InterpretedExecutionFrame (
         get() = instructions.isEmpty()
 
     override fun executeNextInstruction(ctx: ExecutionContext) {
-        if (isFinished)
-            return_void.execute(ctx, this)
+        if (isFinished) {
+            if (method.methodSignature.typeSignature.returnType == PrimitiveTypeSignature.VOID) {
+                return_void.execute(ctx, this)
+            } else {
+                throw HaltException("Expecting return statement from non-void method $method")
+            }
+        }
 
         val instruction = instructions.pop()
         if (ExecutionLogging.isEnabled) println("\t$instruction")
@@ -55,13 +62,14 @@ class InterpretedExecutionFrame (
     }
 
     override fun toString(): String {
-        return "IEF ${System.identityHashCode(this)}"
+        return "IEF ${System.identityHashCode(this)} $method"
     }
 }
 
 class ExceptionScope (
     val handles: List<ExceptionHandle>,
-    val stackSize: Int,
+    val instructionSize: Int,
+    val operandsSize: Int,
     val localDepth: Int
 )
 

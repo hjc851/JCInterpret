@@ -3,6 +3,7 @@ package jcinterpret.core.ctx.frame.interpreted
 import jcinterpret.core.control.ReturnException
 import jcinterpret.core.control.ThrowException
 import jcinterpret.core.ctx.ExecutionContext
+import jcinterpret.core.ctx.ExecutionContextCloner
 import jcinterpret.core.ctx.frame.Instruction
 import jcinterpret.core.ctx.frame.synthetic.SyntheticExecutionFrame
 import jcinterpret.core.ctx.frame.synthetic.SyntheticInstruction
@@ -70,9 +71,9 @@ object break_pop: InterpretedInstruction() {
 
 //  Exception
 
-class excp_push(val handles: List<ExceptionHandle>, val stackSize: Int, val localDepth: Int): InterpretedInstruction() {
+class excp_push(val handles: List<ExceptionHandle>, val instructionsSize: Int, val operandsSize: Int, val localDepth: Int): InterpretedInstruction() {
     override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
-        frame.exceptions.push(ExceptionScope(handles, stackSize, localDepth))
+        frame.exceptions.push(ExceptionScope(handles, instructionsSize, operandsSize, localDepth))
     }
 }
 
@@ -135,7 +136,7 @@ class obj_allocate(val type: ClassTypeSignature): InterpretedInstruction() {
     private fun tryCreateInitialiser(
         decl: TypeDeclaration,
         ctx: ExecutionContext,
-        obj: ConcreteObject
+        obj: ObjectType
     ) {
         val members = decl.bodyDeclarations()
             .filter {
@@ -201,7 +202,7 @@ class obj_get(val name: String, val fieldType: TypeSignature): InterpretedInstru
     override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
         validateSignatures(ctx, fieldType)
 
-        val ref = frame.pop() as StackReference
+        val ref = frame.pop() as ReferenceValue
         val self = ctx.heapArea.dereference(ref) as ObjectType
         val value = self.load(name, fieldType, ctx)
         frame.push(value)
@@ -212,7 +213,7 @@ class obj_put(val name: String, val fieldType: TypeSignature): InterpretedInstru
     override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
         validateSignatures(ctx, fieldType)
 
-        val ref = frame.pop() as StackReference
+        val ref = frame.pop() as ReferenceValue
         val self = ctx.heapArea.dereference(ref) as ObjectType
 
         val oldValue = self.load(name, fieldType, ctx)
@@ -265,7 +266,7 @@ object arr_store: InterpretedInstruction() {
     override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
         val value = frame.pop()
         val index = frame.pop()
-        val ref = frame.pop() as StackReference
+        val ref = frame.pop() as ReferenceValue
 
         val arr = ctx.heapArea.dereference(ref) as SymbolicArray
 
@@ -277,7 +278,7 @@ object arr_store: InterpretedInstruction() {
 
 object arr_store_rev: InterpretedInstruction() {
     override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
-        val ref = frame.pop() as StackReference
+        val ref = frame.pop() as ReferenceValue
         val index = frame.pop()
         val value = frame.pop()
 
@@ -296,7 +297,7 @@ object arr_store_rev: InterpretedInstruction() {
 object arr_load: InterpretedInstruction() {
     override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
         val index = frame.pop()
-        val ref = frame.pop() as StackReference
+        val ref = frame.pop() as ReferenceValue
         val arr = ctx.heapArea.dereference(ref) as SymbolicArray
 
         val value = arr.get(index, arr.componentType, ctx)
@@ -306,7 +307,7 @@ object arr_load: InterpretedInstruction() {
 
 object arr_length: InterpretedInstruction() {
     override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
-        val ref = frame.pop() as StackReference
+        val ref = frame.pop() as ReferenceValue
         val arr = ctx.heapArea.dereference(ref) as SymbolicArray
 
         frame.push(arr.length())
@@ -334,14 +335,26 @@ data class invoke_static(val sig: QualifiedMethodSignature): InterpretedInstruct
     }
 }
 
-data class invoke_special(val sig: QualifiedMethodSignature): InterpretedInstruction() {
+abstract class invoke_instance: InterpretedInstruction() {
+    protected fun getRef(ctx: ExecutionContext): ReferenceValue {
+        val value = ctx.currentFrame.pop()
+
+        if (value is ReferenceValue)
+            return value
+
+        val box = ctx.heapArea.getOrBox(value)
+        return box.ref()
+    }
+}
+
+data class invoke_special(val sig: QualifiedMethodSignature): invoke_instance() {
     override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
         validateSignatures(ctx, sig)
 
         // Get parameters + self from current frame
         val paramCount = sig.methodSignature.typeSignature.argumentTypes.size
         val parameters = frame.pop(paramCount).reversedArray()
-        val self = frame.pop() as ReferenceValue
+        val self = getRef(ctx)
 
         // Get declaring class
         val deccls = ctx.classArea.getClass(sig.declaringClassSignature)
@@ -352,7 +365,7 @@ data class invoke_special(val sig: QualifiedMethodSignature): InterpretedInstruc
     }
 }
 
-data class invoke_virtual(val qsig: QualifiedMethodSignature): InterpretedInstruction() {
+data class invoke_virtual(val qsig: QualifiedMethodSignature): invoke_instance() {
     override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
         validateSignatures(ctx, qsig)
 
@@ -361,7 +374,7 @@ data class invoke_virtual(val qsig: QualifiedMethodSignature): InterpretedInstru
         // Get parameters + self from current frame
         val paramCount = sig.typeSignature.argumentTypes.size
         val parameters = frame.pop(paramCount).reversedArray()
-        val selfref = frame.pop() as ReferenceValue
+        val selfref = getRef(ctx)
 
         // Get self + invoke lookup cls
         val self = ctx.heapArea.dereference(selfref) as ObjectType
@@ -369,6 +382,29 @@ data class invoke_virtual(val qsig: QualifiedMethodSignature): InterpretedInstru
 
         // Get the special method
         val method = deccls.resolveVirtualMethod(sig)
+        method.invoke(ctx, selfref, parameters)
+    }
+}
+
+data class invoke_virtual_super(val qsig: QualifiedMethodSignature): invoke_instance() {
+    override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
+        validateSignatures(ctx, qsig)
+
+        val sig = qsig.methodSignature
+
+        // Get parameters + self from current frame
+        val paramCount = sig.typeSignature.argumentTypes.size
+        val parameters = frame.pop(paramCount).reversedArray()
+        val selfref = getRef(ctx)
+
+        // Get self + invoke lookup cls
+        val self = ctx.heapArea.dereference(selfref) as ObjectType
+
+        val selfdesc = ctx.descriptorLibrary.getDescriptor(self.lookupType)
+        val superclass = ctx.classArea.getClass(selfdesc.superclass!!)
+
+        // Get the special method
+        val method = superclass.resolveVirtualMethod(sig)
         method.invoke(ctx, selfref, parameters)
     }
 }
@@ -495,11 +531,11 @@ object sub: InterpretedInstruction() {
         val lhs = frame.pop()
 
         val result = if (lhs is ReferenceValue && rhs is ReferenceValue) {
-            TODO()
+            ObjectOperatorUtils.sub(lhs, rhs, ctx)
         } else if (lhs is ReferenceValue && rhs !is ReferenceValue) {
-            TODO()
+            ObjectOperatorUtils.sub(lhs, rhs, ctx)
         } else if (lhs !is ReferenceValue && rhs is ReferenceValue) {
-            TODO()
+            ObjectOperatorUtils.sub(lhs, rhs, ctx)
         } else {
             PrimaryOperationUtils.sub(lhs, rhs, ctx)
         }
@@ -690,33 +726,30 @@ object equals: InterpretedInstruction() {
         val rhs = frame.pop()
         val lhs = frame.pop()
 
-        if (lhs is ReferenceValue && rhs is ReferenceValue) {
+        val value = if (lhs is ReferenceValue && rhs is ReferenceValue) {
             val result = lhs.id != rhs.id
-            val value = StackBoolean(result)
-
-            frame.push(value)
-            ctx.records.add(TracerRecord.StackTransformation(lhs, rhs, value, BinaryOperator.EQUALS))
+            StackBoolean(result)
         } else if (lhs is ReferenceValue && rhs !is ReferenceValue) {
-            TODO()
+            ObjectOperatorUtils.equals(lhs, rhs, ctx)
         } else if (lhs !is ReferenceValue && rhs is ReferenceValue) {
-            TODO()
+            ObjectOperatorUtils.equals(lhs, rhs, ctx)
         } else {
-            val value = if (lhs is ConcreteValue<*> && rhs is ConcreteValue<*>) {
+            if (lhs is ConcreteValue<*> && rhs is ConcreteValue<*>) {
                 StackBoolean(lhs.number() == rhs.number())
             } else {
                 BinaryOperationValue(lhs, rhs, StackType.BOOLEAN, BinaryOperator.EQUALS)
             }
-
-            frame.push(value)
-            ctx.records.add(TracerRecord.StackTransformation(lhs, rhs, value, BinaryOperator.EQUALS))
         }
+
+        frame.push(value)
+        ctx.records.add(TracerRecord.StackTransformation(lhs, rhs, value, BinaryOperator.EQUALS))
     }
 }
 
 object notequals: InterpretedInstruction() {
     override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
-        frame.instructions.push(not)
-        frame.instructions.push(equals)
+        equals.execute(ctx, frame)
+        not.execute(ctx, frame)
     }
 }
 
@@ -726,11 +759,11 @@ object less: InterpretedInstruction() {
         val lhs = frame.pop()
 
         val result = if (lhs is ReferenceValue && rhs is ReferenceValue) {
-            TODO()
+            ObjectOperatorUtils.less(lhs, rhs, ctx)
         } else if (lhs is ReferenceValue && rhs !is ReferenceValue) {
-            TODO()
+            ObjectOperatorUtils.less(lhs, rhs, ctx)
         } else if (lhs !is ReferenceValue && rhs is ReferenceValue) {
-            TODO()
+            ObjectOperatorUtils.less(lhs, rhs, ctx)
         } else {
             PrimaryOperationUtils.less(lhs, rhs, ctx)
         }
@@ -745,11 +778,11 @@ object greater: InterpretedInstruction() {
         val lhs = frame.pop()
 
         val result = if (lhs is ReferenceValue && rhs is ReferenceValue) {
-            TODO()
+            ObjectOperatorUtils.greater(lhs, rhs, ctx)
         } else if (lhs is ReferenceValue && rhs !is ReferenceValue) {
-            TODO()
+            ObjectOperatorUtils.greater(lhs, rhs, ctx)
         } else if (lhs !is ReferenceValue && rhs is ReferenceValue) {
-            TODO()
+            ObjectOperatorUtils.greater(lhs, rhs, ctx)
         } else {
             PrimaryOperationUtils.greater(lhs, rhs, ctx)
         }
@@ -843,11 +876,12 @@ class ldc_string(val value: String): InterpretedInstruction() {
     }
 }
 
-class ldc_type(val value: TypeSignature): InterpretedInstruction() {
+class ldc_type(val type: TypeSignature): InterpretedInstruction() {
     override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
-        validateSignatures(ctx, value)
+        validateSignatures(ctx, type)
 
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val obj = ctx.heapArea.getOrAllocateClassObject(type)
+        frame.push(obj.ref())
     }
 }
 
@@ -956,10 +990,23 @@ class foreach_loop(val variable: String, val type: TypeSignature, val body: Stat
 
             popCount = 6
 
-        } else if (collection is SymbolicObject) {
-            TODO()
-        } else if (collection is ConcreteObject) {
-            TODO()
+        } else if (collection is ObjectType) { /* Make an assumption that the object is a List */
+            val potenialValues = ctx.records.filterIsInstance<TracerRecord.InstanceLibraryMethodCall>()
+                .filter { it.scope == ref }
+                .filter { it.method.methodSignature.name.startsWith("add") }
+                .mapNotNull { it.params.lastOrNull() }
+
+            for (value in potenialValues) {
+                instructions.push(block_pop)
+                instructions.push(decode_stmt(body))
+                instructions.push(store(variable, type))
+                instructions.push(push(value))
+                instructions.push(allocate(variable, type))
+                instructions.push(block_push)
+            }
+
+            popCount = 6
+
         } else {
             TODO()
         }
@@ -1069,11 +1116,31 @@ class conditional_ternary(val then: Expression, val otherwise: Expression): Inte
 }
 
 class conditional_switch(val statements: List<Statement>): InterpretedInstruction() {
+
     override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
         val value = frame.pop()
 
-        if (value is ConcreteValue<*>) {
+        if (value is ReferenceValue) {
+            val obj = ctx.heapArea.dereference(value)
 
+            if (obj is BoxedStackValueObject) {
+                val boxedValue = obj.value
+                handleStackValue(ctx, frame, boxedValue)
+
+            } else if (obj is BoxedStringObject) {
+                val str = obj.value
+                handleStringValue(ctx, frame, value, str)
+
+            } else {
+                TODO()
+            }
+        } else {
+            handleStackValue(ctx, frame, value)
+        }
+    }
+
+    private fun handleStringValue(ctx: ExecutionContext, frame: InterpretedExecutionFrame, ref: ReferenceValue, value: StringValue) {
+        if (value is ConcreteStringValue) {
             for (i in 0 until statements.size) {
                 val statement = statements[i]
 
@@ -1084,14 +1151,8 @@ class conditional_switch(val statements: List<Statement>): InterpretedInstructio
                             .forEach { frame.instructions.push(decode_stmt(it)) }
 
                     } else {
-                        val expr = statement.expression
-
-                        val match = when (expr) {
-                            is NumberLiteral -> expr.token == value.value.toString()
-                            is CharacterLiteral -> expr.charValue() == value.value
-
-                            else -> throw IllegalArgumentException("Unknown literal in switch statement $expr")
-                        }
+                        val expr = statement.expression as StringLiteral
+                        val match = value.value == expr.literalValue
 
                         if (match) {
                             statements.subList(i+1, statements.size-1)
@@ -1101,23 +1162,7 @@ class conditional_switch(val statements: List<Statement>): InterpretedInstructio
                     }
                 }
             }
-
-        } else if (value is ReferenceValue) {
-
-            val obj = ctx.heapArea.dereference(value)
-
-            if (obj is BoxedStackValueObject) {
-                TODO()
-
-            } else if (obj is BoxedStringObject) {
-                TODO()
-
-            } else {
-                TODO()
-            }
-
-        } else /* symbolic or computed */ {
-
+        } else {
             // This thread will execute the default, or skip if none
             for (i in 0 until statements.size) {
                 val statement = statements[i]
@@ -1133,8 +1178,8 @@ class conditional_switch(val statements: List<Statement>): InterpretedInstructio
                             if (reverseStatement is SwitchCase && !reverseStatement.isDefault) {
                                 frame.instructions.push(tracehook { TracerRecord.Assertion(it.currentFrame.pop(), false) })
                                 frame.instructions.push(equals)
-                                frame.instructions.push(decode_expr(statement.expression))
-                                frame.instructions.push(push(value))
+                                frame.instructions.push(decode_expr(reverseStatement.expression))
+                                frame.instructions.push(push(ref))
                             }
                         }
 
@@ -1150,7 +1195,97 @@ class conditional_switch(val statements: List<Statement>): InterpretedInstructio
                                 if (reverseStatement is SwitchCase && !reverseStatement.isDefault) {
                                     forkFrame.instructions.push(tracehook { TracerRecord.Assertion(it.currentFrame.pop(), false) })
                                     forkFrame.instructions.push(equals)
-                                    forkFrame.instructions.push(decode_expr(statement.expression))
+                                    forkFrame.instructions.push(decode_expr(reverseStatement.expression))
+                                    forkFrame.instructions.push(push(ref))
+                                }
+                            }
+
+                            forkFrame.instructions.push(tracehook { TracerRecord.Assertion(it.currentFrame.pop(), true) })
+                            forkFrame.instructions.push(equals)
+                            forkFrame.instructions.push(decode_expr(statement.expression))
+                            forkFrame.instructions.push(push(ref))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun handleStackValue(ctx: ExecutionContext, frame: InterpretedExecutionFrame, value: StackValue) {
+
+        if (value is ReferenceValue)
+            throw IllegalStateException("INVALID INPUT: ${value.javaClass}")
+
+        if (value is ConcreteValue<*>) {
+            for (i in 0 until statements.size) {
+                val statement = statements[i]
+
+                if (statement is SwitchCase) {
+                    if (statement.isDefault) {
+                        statements.subList(i+1, statements.size)
+                            .reversed()
+                            .forEach { frame.instructions.push(decode_stmt(it)) }
+
+                        Unit
+
+                    } else {
+                        val expr = statement.expression
+
+                        val match = when (expr) {
+                            is NumberLiteral -> expr.token == value.value.toString()
+                            is CharacterLiteral -> expr.charValue() == value.value
+
+                            else -> throw IllegalArgumentException("Unknown literal in switch statement $expr")
+                        }
+
+                        if (match) {
+                            statements.subList(i+1, statements.size)
+                                .reversed()
+                                .forEach { frame.instructions.push(decode_stmt(it)) }
+
+                            Unit
+                        }
+                    }
+                }
+            }
+        } else {
+            // This thread will execute the default, or skip if none
+            for (i in 0 until statements.size) {
+                val statement = statements[i]
+
+                if (statement is SwitchCase) {
+                    if (statement.isDefault) {
+                        val stats = statements.subList(i+1, statements.size)
+                        stats.reversed()
+                            .forEach { frame.instructions.push(decode_stmt(it)) }
+
+                        Unit
+
+                        for (j in i downTo 0) {
+                            val reverseStatement = statements[j]
+                            if (reverseStatement is SwitchCase && !reverseStatement.isDefault) {
+                                frame.instructions.push(tracehook { TracerRecord.Assertion(it.currentFrame.pop(), false) })
+                                frame.instructions.push(equals)
+                                frame.instructions.push(decode_expr(reverseStatement.expression))
+                                frame.instructions.push(push(value))
+                            }
+                        }
+
+                    } else {
+                        ctx.fork { ctx ->
+                            val forkFrame = (ctx.currentFrame as InterpretedExecutionFrame)
+                            val stats = statements.subList(i+1, statements.size)
+                            stats.reversed()
+                                .forEach { frame.instructions.push(decode_stmt(it)) }
+
+                            Unit
+
+                            for (j in i downTo 0) {
+                                val reverseStatement = statements[j]
+                                if (reverseStatement is SwitchCase && !reverseStatement.isDefault) {
+                                    forkFrame.instructions.push(tracehook { TracerRecord.Assertion(it.currentFrame.pop(), false) })
+                                    forkFrame.instructions.push(equals)
+                                    forkFrame.instructions.push(decode_expr(reverseStatement.expression))
                                     forkFrame.instructions.push(push(value))
                                 }
                             }

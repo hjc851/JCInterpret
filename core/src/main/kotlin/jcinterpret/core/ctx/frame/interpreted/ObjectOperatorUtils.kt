@@ -40,8 +40,10 @@ object ObjectOperatorUtils {
 
             return ref
 
-        } else if (lobj is BoxedStackValueObject) {
-            TODO()
+        } else if (lobj is BoxedStackValueObject && robj is BoxedStackValueObject) {
+            val lvalue = lobj.value
+            val rvalue = robj.value
+            return PrimaryOperationUtils.add(lvalue, rvalue, ctx)
         } else {
             TODO()
         }
@@ -100,6 +102,134 @@ object ObjectOperatorUtils {
         }
 
 
+        TODO()
+    }
+
+    fun sub(lhs: ReferenceValue, rhs: ReferenceValue, ctx: ExecutionContext): StackValue {
+        val lobj = ctx.heapArea.dereference(lhs)
+        val robj = ctx.heapArea.dereference(rhs)
+
+        if (lobj is BoxedStackValueObject && robj is BoxedStackValueObject) {
+            val lval = lobj.value
+            val rval = robj.value
+
+            return PrimaryOperationUtils.sub(lval, rval, ctx)
+        }
+
+        TODO()
+    }
+
+    fun sub(lhs: StackValue, rhs: ReferenceValue, ctx: ExecutionContext): StackValue {
+        val robj = ctx.heapArea.dereference(rhs)
+
+        if (robj is BoxedStackValueObject) {
+            val lval = lhs
+            val rval = robj.value
+
+            return PrimaryOperationUtils.sub(lval, rval, ctx)
+        }
+
+        TODO()
+    }
+
+    fun sub(lhs: ReferenceValue, rhs: StackValue, ctx: ExecutionContext): StackValue {
+        val lobj = ctx.heapArea.dereference(lhs)
+
+        if (lobj is BoxedStackValueObject) {
+            val lval = lobj.value
+            val rval = rhs
+
+            return PrimaryOperationUtils.sub(lval, rval, ctx)
+        }
+
+        TODO()
+    }
+
+    fun less(lhs: ReferenceValue, rhs: ReferenceValue, ctx: ExecutionContext): StackValue {
+        val lobj = ctx.heapArea.dereference(lhs)
+        val robj = ctx.heapArea.dereference(rhs)
+
+        TODO()
+    }
+
+    fun less(lhs: ReferenceValue, rhs: StackValue, ctx: ExecutionContext): StackValue {
+        val lobj = ctx.heapArea.dereference(lhs)
+
+        if (lobj is BoxedStackValueObject) {
+            val lvalue = lobj.value
+
+            val result = if (lvalue is ConcreteValue<*> && rhs is ConcreteValue<*>)
+                StackBoolean(lvalue.number().toDouble() < rhs.number().toDouble())
+            else
+                BinaryOperationValue(lvalue, rhs, StackType.BOOLEAN, BinaryOperator.LESS)
+
+            ctx.records.add(TracerRecord.StackTransformation(lvalue, rhs, result, BinaryOperator.LESS))
+            return result
+        }
+
+
+        TODO()
+    }
+
+    fun less(lhs: StackValue, rhs: ReferenceValue, ctx: ExecutionContext): StackValue {
+        val robj = ctx.heapArea.dereference(rhs)
+
+        TODO()
+    }
+
+    fun equals(lhs: StackValue, rhs: ReferenceValue, ctx: ExecutionContext): StackValue {
+        val robj = ctx.heapArea.dereference(rhs)
+
+        if (robj is BoxedStackValueObject) {
+            val rvalue = robj.value
+
+            val result = if (rvalue is ConcreteValue<*> && lhs is ConcreteValue<*>)
+                StackBoolean(rvalue.number().toDouble() == lhs.number().toDouble())
+            else
+                BinaryOperationValue(rvalue, lhs, StackType.BOOLEAN, BinaryOperator.EQUALS)
+
+            return result
+        }
+
+        TODO()
+    }
+
+    fun equals(lhs: ReferenceValue, rhs: StackValue, ctx: ExecutionContext): StackValue {
+        val lobj = ctx.heapArea.dereference(lhs)
+
+        if (lobj is BoxedStackValueObject) {
+            val lvalue = lobj.value
+
+            val result = if (lvalue is ConcreteValue<*> && rhs is ConcreteValue<*>)
+                StackBoolean(lvalue.number().toDouble() == rhs.number().toDouble())
+            else
+                BinaryOperationValue(lvalue, rhs, StackType.BOOLEAN, BinaryOperator.EQUALS)
+
+            return result
+        }
+
+        TODO()
+    }
+
+    fun greater(lhs: ReferenceValue, rhs: ReferenceValue, ctx: ExecutionContext): StackValue {
+        val lobj = ctx.heapArea.dereference(lhs)
+        val robj = ctx.heapArea.dereference(rhs)
+
+        if (lobj is BoxedStackValueObject && robj is BoxedStackValueObject) {
+            val lvalue = lobj.value
+            val rvalue = robj.value
+
+            return PrimaryOperationUtils.greater(lvalue, rvalue, ctx)
+        }
+
+        TODO()
+    }
+
+    fun greater(lhs: ReferenceValue, rhs: StackValue, ctx: ExecutionContext): StackValue {
+        TODO()
+    }
+
+    fun greater(lhs: StackValue, rhs: ReferenceValue, ctx: ExecutionContext): StackValue {
         TODO()
     }
 

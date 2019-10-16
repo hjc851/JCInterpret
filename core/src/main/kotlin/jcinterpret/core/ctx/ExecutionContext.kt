@@ -5,7 +5,7 @@ import jcinterpret.core.JavaConcolicInterpreter
 import jcinterpret.core.control.*
 import jcinterpret.core.ctx.frame.ExecutionFrame
 import jcinterpret.core.ctx.frame.MethodBoundExecutionFrame
-import jcinterpret.core.ctx.frame.interpreted.InterpretedExecutionFrame
+import jcinterpret.core.ctx.frame.interpreted.*
 import jcinterpret.core.ctx.meta.ClassArea
 import jcinterpret.core.ctx.meta.HeapArea
 import jcinterpret.core.ctx.meta.NativeArea
@@ -57,15 +57,31 @@ class ExecutionContext (
 
             } catch (e: ThrowException) {
                 val eobj = heapArea.dereference(e.ref)
+                val exceptCT = classArea.getClass(eobj.type as ClassTypeSignature)
 
-                while (frames.isNotEmpty()) {
+                ehandle@while (frames.isNotEmpty()) {
                     val frame = frames.peek()
 
                     if (frame is InterpretedExecutionFrame) {
                         while (frame.exceptions.isNotEmpty()) {
                             val escope = frame.exceptions.pop()
 
-                            TODO()
+                            while (frame.instructions.size > escope.instructionSize) frame.instructions.pop()
+                            while (frame.operands.size > escope.operandsSize) frame.operands.pop()
+                            while (frame.locals.scopes.size > escope.localDepth) frame.locals.scopes.pop()
+
+                            for (handle in escope.handles) {
+                                val handleCT = classArea.getClass(handle.type)
+                                if (exceptCT.isAssignableTo(handleCT)) {
+                                    frame.instructions.push(block_pop)
+                                    frame.instructions.push(decode_stmt(handle.handle))
+                                    frame.instructions.push(store(handle.name, handle.type))
+                                    frame.instructions.push(push(e.ref))
+                                    frame.instructions.push(allocate(handle.name, handle.type))
+                                    frame.instructions.push(block_push)
+                                    break@ehandle
+                                }
+                            }
                         }
                     }
 

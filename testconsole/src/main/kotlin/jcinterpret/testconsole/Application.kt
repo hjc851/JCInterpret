@@ -36,7 +36,7 @@ fun main(args: Array<String>) {
         .filter { Files.isDirectory(it) }
         .toList()
         .sorted()
-//        .drop(34)
+        .drop(4)
 
     //  Pre-Processing: Parse the projects
     println("Pre-Processing: Parsing the projects")

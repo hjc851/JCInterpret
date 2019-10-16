@@ -17,15 +17,18 @@ class BindingDescriptorResolver (
             for (type in cu.types()) {
                 type as AbstractTypeDeclaration
 
-                try {
-                    val desc = TypeBindingClassTypeDescriptor(type.resolveBinding())
-                    classes[desc.signature] = desc
-                } catch (e: Exception) {
-                    cu.messages.forEach { println(it) }
-                    throw e
-                }
+                addType(type)
             }
         }
+    }
+
+    private fun addType(type: AbstractTypeDeclaration) {
+        val desc = TypeBindingClassTypeDescriptor(type.resolveBinding())
+        classes[desc.signature] = desc
+
+        type.bodyDeclarations()
+            .filterIsInstance<AbstractTypeDeclaration>()
+            .forEach { addType(it) }
     }
 
     override fun tryResolveDescriptor(sig: ClassTypeSignature): ClassTypeDescriptor? {
