@@ -134,7 +134,7 @@ class HeapArea (
 
             type is ClassTypeSignature -> SymbolicObject(id, type, existing.fields)
 
-            else -> TODO()
+            else -> throw IllegalStateException("Unexpected object type for promotion ${existing.javaClass}, ${type}")
         }
 
         existing.fields.toMap(obj.fields)

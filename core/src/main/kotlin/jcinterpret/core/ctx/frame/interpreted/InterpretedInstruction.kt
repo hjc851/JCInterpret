@@ -494,11 +494,16 @@ object sub: InterpretedInstruction() {
         val rhs = frame.pop()
         val lhs = frame.pop()
 
-        if (lhs is ReferenceValue || rhs is ReferenceValue) {
+        val result = if (lhs is ReferenceValue && rhs is ReferenceValue) {
             TODO()
+        } else if (lhs is ReferenceValue && rhs !is ReferenceValue) {
+            TODO()
+        } else if (lhs !is ReferenceValue && rhs is ReferenceValue) {
+            TODO()
+        } else {
+            PrimaryOperationUtils.sub(lhs, rhs, ctx)
         }
 
-        val result = PrimaryOperationUtils.sub(lhs, rhs, ctx)
         frame.push(result)
     }
 }
@@ -508,12 +513,16 @@ object mul: InterpretedInstruction() {
         val rhs = frame.pop()
         val lhs = frame.pop()
 
-        // Handle unboxing
-        if (lhs is ReferenceValue || rhs is ReferenceValue) {
+        val result = if (lhs is ReferenceValue && rhs is ReferenceValue) {
             TODO()
+        } else if (lhs is ReferenceValue && rhs !is ReferenceValue) {
+            TODO()
+        } else if (lhs !is ReferenceValue && rhs is ReferenceValue) {
+            TODO()
+        } else {
+            PrimaryOperationUtils.mul(lhs, rhs, ctx)
         }
 
-        val result = PrimaryOperationUtils.mul(lhs, rhs, ctx)
         frame.push(result)
     }
 }
@@ -523,12 +532,16 @@ object div: InterpretedInstruction() {
         val rhs = frame.pop()
         val lhs = frame.pop()
 
-        // Handle unboxing
-        if (lhs is ReferenceValue || rhs is ReferenceValue) {
+        val result = if (lhs is ReferenceValue && rhs is ReferenceValue) {
             TODO()
+        } else if (lhs is ReferenceValue && rhs !is ReferenceValue) {
+            TODO()
+        } else if (lhs !is ReferenceValue && rhs is ReferenceValue) {
+            TODO()
+        } else {
+            PrimaryOperationUtils.div(lhs, rhs, ctx)
         }
 
-        val result = PrimaryOperationUtils.div(lhs, rhs, ctx)
         frame.push(result)
     }
 }
@@ -538,12 +551,16 @@ object mod: InterpretedInstruction() {
         val rhs = frame.pop()
         val lhs = frame.pop()
 
-        // Handle unboxing
-        if (lhs is ReferenceValue || rhs is ReferenceValue) {
+        val result = if (lhs is ReferenceValue && rhs is ReferenceValue) {
             TODO()
+        } else if (lhs is ReferenceValue && rhs !is ReferenceValue) {
+            TODO()
+        } else if (lhs !is ReferenceValue && rhs is ReferenceValue) {
+            TODO()
+        } else {
+            PrimaryOperationUtils.mod(lhs, rhs, ctx)
         }
 
-        val result = PrimaryOperationUtils.mod(lhs, rhs, ctx)
         frame.push(result)
     }
 }
@@ -552,19 +569,52 @@ object mod: InterpretedInstruction() {
 
 object shl: InterpretedInstruction() {
     override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val rhs = frame.pop()
+        val lhs = frame.pop()
+
+        if (lhs is ReferenceValue && rhs is ReferenceValue) {
+            TODO()
+        } else if (lhs is ReferenceValue && rhs !is ReferenceValue) {
+            TODO()
+        } else if (lhs !is ReferenceValue && rhs is ReferenceValue) {
+            TODO()
+        } else {
+            TODO()
+        }
     }
 }
 
 object shr: InterpretedInstruction() {
     override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val rhs = frame.pop()
+        val lhs = frame.pop()
+
+        if (lhs is ReferenceValue && rhs is ReferenceValue) {
+            TODO()
+        } else if (lhs is ReferenceValue && rhs !is ReferenceValue) {
+            TODO()
+        } else if (lhs !is ReferenceValue && rhs is ReferenceValue) {
+            TODO()
+        } else {
+            TODO()
+        }
     }
 }
 
 object ushr: InterpretedInstruction() {
     override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val rhs = frame.pop()
+        val lhs = frame.pop()
+
+        if (lhs is ReferenceValue && rhs is ReferenceValue) {
+            TODO()
+        } else if (lhs is ReferenceValue && rhs !is ReferenceValue) {
+            TODO()
+        } else if (lhs !is ReferenceValue && rhs is ReferenceValue) {
+            TODO()
+        } else {
+            TODO()
+        }
     }
 }
 
@@ -583,12 +633,16 @@ object or: InterpretedInstruction() {
         val rhs = frame.pop()
         val lhs = frame.pop()
 
-        // Handle unboxing
-        if (lhs is ReferenceValue || rhs is ReferenceValue) {
+        val result = if (lhs is ReferenceValue && rhs is ReferenceValue) {
             TODO()
+        } else if (lhs is ReferenceValue && rhs !is ReferenceValue) {
+            TODO()
+        } else if (lhs !is ReferenceValue && rhs is ReferenceValue) {
+            TODO()
+        } else {
+            PrimaryOperationUtils.or(lhs, rhs, ctx)
         }
 
-        val result = PrimaryOperationUtils.xor(lhs, rhs, ctx)
         frame.push(result)
     }
 }
@@ -598,12 +652,16 @@ object and: InterpretedInstruction() {
         val rhs = frame.pop()
         val lhs = frame.pop()
 
-        // Handle unboxing
-        if (lhs is ReferenceValue || rhs is ReferenceValue) {
+        val result = if (lhs is ReferenceValue && rhs is ReferenceValue) {
             TODO()
+        } else if (lhs is ReferenceValue && rhs !is ReferenceValue) {
+            TODO()
+        } else if (lhs !is ReferenceValue && rhs is ReferenceValue) {
+            TODO()
+        } else {
+            PrimaryOperationUtils.and(lhs, rhs, ctx)
         }
 
-        val result = PrimaryOperationUtils.and(lhs, rhs, ctx)
         frame.push(result)
     }
 }
@@ -613,12 +671,16 @@ object xor: InterpretedInstruction() {
         val rhs = frame.pop()
         val lhs = frame.pop()
 
-        // Handle unboxing
-        if (lhs is ReferenceValue || rhs is ReferenceValue) {
+        val result = if (lhs is ReferenceValue && rhs is ReferenceValue) {
             TODO()
+        } else if (lhs is ReferenceValue && rhs !is ReferenceValue) {
+            TODO()
+        } else if (lhs !is ReferenceValue && rhs is ReferenceValue) {
+            TODO()
+        } else {
+            PrimaryOperationUtils.xor(lhs, rhs, ctx)
         }
 
-        val result = PrimaryOperationUtils.xor(lhs, rhs, ctx)
         frame.push(result)
     }
 }
@@ -634,10 +696,11 @@ object equals: InterpretedInstruction() {
 
             frame.push(value)
             ctx.records.add(TracerRecord.StackTransformation(lhs, rhs, value, BinaryOperator.EQUALS))
-        } else if (lhs is ReferenceValue || rhs is ReferenceValue) {
+        } else if (lhs is ReferenceValue && rhs !is ReferenceValue) {
+            TODO()
+        } else if (lhs !is ReferenceValue && rhs is ReferenceValue) {
             TODO()
         } else {
-
             val value = if (lhs is ConcreteValue<*> && rhs is ConcreteValue<*>) {
                 StackBoolean(lhs.number() == rhs.number())
             } else {
@@ -662,12 +725,16 @@ object less: InterpretedInstruction() {
         val rhs = frame.pop()
         val lhs = frame.pop()
 
-        // Handle unboxing
-        if (lhs is ReferenceValue || rhs is ReferenceValue) {
+        val result = if (lhs is ReferenceValue && rhs is ReferenceValue) {
             TODO()
+        } else if (lhs is ReferenceValue && rhs !is ReferenceValue) {
+            TODO()
+        } else if (lhs !is ReferenceValue && rhs is ReferenceValue) {
+            TODO()
+        } else {
+            PrimaryOperationUtils.less(lhs, rhs, ctx)
         }
 
-        val result = PrimaryOperationUtils.less(lhs, rhs, ctx)
         frame.push(result)
     }
 }
@@ -677,12 +744,16 @@ object greater: InterpretedInstruction() {
         val rhs = frame.pop()
         val lhs = frame.pop()
 
-        // Handle unboxing
-        if (lhs is ReferenceValue || rhs is ReferenceValue) {
+        val result = if (lhs is ReferenceValue && rhs is ReferenceValue) {
             TODO()
+        } else if (lhs is ReferenceValue && rhs !is ReferenceValue) {
+            TODO()
+        } else if (lhs !is ReferenceValue && rhs is ReferenceValue) {
+            TODO()
+        } else {
+            PrimaryOperationUtils.greater(lhs, rhs, ctx)
         }
 
-        val result = PrimaryOperationUtils.greater(lhs, rhs, ctx)
         frame.push(result)
     }
 }
@@ -692,12 +763,16 @@ object lessequals: InterpretedInstruction() {
         val rhs = frame.pop()
         val lhs = frame.pop()
 
-        // Handle unboxing
-        if (lhs is ReferenceValue || rhs is ReferenceValue) {
+        val result = if (lhs is ReferenceValue && rhs is ReferenceValue) {
             TODO()
+        } else if (lhs is ReferenceValue && rhs !is ReferenceValue) {
+            TODO()
+        } else if (lhs !is ReferenceValue && rhs is ReferenceValue) {
+            TODO()
+        } else {
+            PrimaryOperationUtils.lessequals(lhs, rhs, ctx)
         }
 
-        val result = PrimaryOperationUtils.lessequals(lhs, rhs, ctx)
         frame.push(result)
     }
 }
@@ -707,12 +782,16 @@ object greaterequals: InterpretedInstruction() {
         val rhs = frame.pop()
         val lhs = frame.pop()
 
-        // Handle unboxing
-        if (lhs is ReferenceValue || rhs is ReferenceValue) {
-            TODO()
+        val result =  if (lhs is ReferenceValue && rhs is ReferenceValue) {
+            ObjectOperatorUtils.greaterequals(lhs, rhs, ctx)
+        } else if (lhs is ReferenceValue && rhs !is ReferenceValue) {
+            ObjectOperatorUtils.greaterequals(lhs, rhs, ctx)
+        } else if (lhs !is ReferenceValue && rhs is ReferenceValue) {
+            ObjectOperatorUtils.greaterequals(lhs, rhs, ctx)
+        } else {
+            PrimaryOperationUtils.greaterequals(lhs, rhs, ctx)
         }
 
-        val result = PrimaryOperationUtils.greaterequals(lhs, rhs, ctx)
         frame.push(result)
     }
 }

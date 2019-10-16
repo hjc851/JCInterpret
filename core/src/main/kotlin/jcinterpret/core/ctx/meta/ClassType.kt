@@ -14,10 +14,6 @@ class ClassType(
     val virtualMethods: MutableMap<String, Method>
 ) {
     fun getStaticField(name: String, fieldType: TypeSignature): Field {
-        if (!staticFields.containsKey(name)) {
-            TODO()
-        }
-
         return staticFields[name]!!
     }
 

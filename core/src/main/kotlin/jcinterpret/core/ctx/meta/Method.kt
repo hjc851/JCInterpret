@@ -47,13 +47,6 @@ class InterpretedMethod(desc: MethodDescriptor, val decl: MethodDeclaration): Me
             val ptype = sig.methodSignature.typeSignature.argumentTypes[i]
             val param = params[i]
 
-            if (ptype is PrimitiveTypeSignature && param is ReferenceValue ||
-                ptype is ReferenceTypeSignature && param !is ReferenceValue)
-                TODO("Handle boxing")
-
-            if (declaredParameter.isVarargs)
-                TODO("Varargs - make array of (i until params.size) + break")
-
             val pdesc = ctx.descriptorLibrary.getDescriptor(ptype)
             locals.allocate(name, pdesc)
             locals.assign(name, param)
@@ -90,12 +83,6 @@ class InterpretedMethod(desc: MethodDescriptor, val decl: MethodDeclaration): Me
 
 class OpaqueMethod(desc: MethodDescriptor): Method(desc) {
     override fun invoke(ctx: ExecutionContext, selfRef: ReferenceValue?, params: Array<StackValue>) {
-
-        if (desc.isStatic && selfRef != null)
-            throw IllegalStateException("Attempting to call static method with this value")
-
-        if (!desc.isStatic && selfRef == null)
-            throw IllegalStateException("Attempting to call instance method without this value")
 
         val returnType = desc.signature.typeSignature.returnType
         val frame = ctx.currentFrame

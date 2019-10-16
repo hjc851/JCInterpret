@@ -102,4 +102,31 @@ object ObjectOperatorUtils {
 
         TODO()
     }
+
+    fun greaterequals(lhs: ReferenceValue, rhs: ReferenceValue, ctx: ExecutionContext): StackValue {
+        TODO()
+    }
+
+    fun greaterequals(lhs: ReferenceValue, rhs: StackValue, ctx: ExecutionContext): StackValue {
+
+        val lobj = ctx.heapArea.dereference(lhs)
+
+        if (lobj is BoxedStackValueObject) {
+            val lvalue = lobj.value
+
+            val result = if (lvalue is ConcreteValue<*> && rhs is ConcreteValue<*>)
+                StackBoolean(lvalue.number().toDouble() >= rhs.number().toDouble())
+            else
+                BinaryOperationValue(lvalue, rhs, StackType.BOOLEAN, BinaryOperator.GREATEREQUALS)
+
+            ctx.records.add(TracerRecord.StackTransformation(lvalue, rhs, result, BinaryOperator.GREATEREQUALS))
+            return result
+        }
+
+        TODO()
+    }
+
+    fun greaterequals(lhs: StackValue, rhs: ReferenceValue, ctx: ExecutionContext): StackValue {
+        TODO()
+    }
 }

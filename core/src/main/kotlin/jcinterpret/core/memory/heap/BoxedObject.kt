@@ -5,6 +5,7 @@ import jcinterpret.core.memory.stack.StackValue
 import jcinterpret.core.memory.stack.SymbolicValue
 import jcinterpret.signature.ClassTypeSignature
 import jcinterpret.signature.TypeSignature
+import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
 abstract class BoxedObject<T> (
     id: Int,
@@ -13,7 +14,7 @@ abstract class BoxedObject<T> (
 ): ObjectType(id, type, mutableMapOf()) {
 
     override fun getField(name: String, type: TypeSignature, ctx: ExecutionContext): Field {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        throw IllegalStateException("Boxed values do not have fields")
     }
 }
 

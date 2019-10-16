@@ -87,7 +87,7 @@ class SymbolicArray (
     }
 
     override fun getField(name: String, type: TypeSignature, ctx: ExecutionContext): Field {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        throw IllegalStateException("Arraysdo not have fields")
     }
 
     fun length(): StackValue {

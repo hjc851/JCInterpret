@@ -119,15 +119,6 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
     }
 
     override fun visit(node: ForStatement): Boolean {
-        val ids = mutableListOf<String>()
-        node.initializers().forEach {
-            (it as VariableDeclarationExpression)
-            it.fragments().forEach {
-                (it as VariableDeclaration)
-                ids.add(it.name.identifier)
-            }
-        }
-
         val instr = for_loop(node.expression, node.body, node.updaters() as MutableList<Expression>)
         val instructionSize = frame.instructions.size
         val operandsSize = frame.operands.size
