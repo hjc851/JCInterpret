@@ -1,5 +1,6 @@
 package jcinterpret.core.ctx.frame.synthetic
 
+import jcinterpret.core.ExecutionLogging
 import jcinterpret.core.control.ClassAreaFault
 import jcinterpret.core.control.HaltException
 import jcinterpret.core.control.ReturnException
@@ -116,7 +117,7 @@ class ValidateClassDependencies(val sig: ClassTypeSignature) : SyntheticInstruct
         }
 
         validateSignatures(ctx, *sigs.toTypedArray())
-        println("Validated class ${sig}")
+        if (ExecutionLogging.isEnabled) println("Validated class ${sig}")
     }
 }
 

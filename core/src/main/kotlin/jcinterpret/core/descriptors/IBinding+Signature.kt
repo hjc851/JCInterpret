@@ -22,7 +22,44 @@ fun ITypeBinding.signature(): TypeSignature {
             }
         }
 
-        this.isClass || this.isInterface -> {
+        this.isAnonymous -> {
+            return SignatureParser(key).parseClassTypeSignature()
+        }
+
+        this.isCapture -> {
+            TODO()
+        }
+
+        this.isGenericType -> {
+            val qname = this.qualifiedName
+            val sig = "L${qname.replace(".", "/")};"
+            return SignatureParser(sig).parseClassTypeSignature()
+        }
+
+        this.isIntersectionType -> {
+            TODO()
+        }
+
+        this.isParameterizedType -> {
+            val erasure = this.erasure
+            val sig = erasure.signature()
+            return sig
+        }
+
+        this.isUpperbound -> {
+            TODO()
+        }
+
+        this.isWildcardType -> {
+            TODO()
+        }
+
+        this.isTypeVariable -> {
+            return this.erasure.signature()
+        }
+
+        this.isClass || this.isInterface || this.isEnum -> {
+
             val sig = "L${this.binaryName.replace(".", "/")};"
             return SignatureParser(sig).parseClassTypeSignature()
         }
@@ -43,6 +80,12 @@ fun IMethodBinding.qualifiedSignature(): QualifiedMethodSignature {
 }
 
 fun IMethodBinding.signature(): MethodSignature {
+    if (this.methodDeclaration != this) {
+        val declaration = this.methodDeclaration
+        val dsig = declaration.signature()
+        return dsig
+    }
+
     val name = if (this.isConstructor) "<init>" else this.name
     val params = this.parameterTypes.map { it.signature() }.toTypedArray()
     val retn = this.returnType.signature()

@@ -1,9 +1,11 @@
 package jcinterpret.core.ctx.frame.interpreted
 
+import jcinterpret.core.ExecutionLogging
 import jcinterpret.core.control.ClassAreaFault
 import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.ctx.frame.MethodBoundExecutionFrame
 import jcinterpret.core.ctx.frame.synthetic.ReturnVoid
+import jcinterpret.core.ctx.frame.synthetic.SyntheticInstruction
 import jcinterpret.core.descriptors.MethodDescriptor
 import jcinterpret.core.memory.stack.StackValue
 import jcinterpret.signature.ClassTypeSignature
@@ -17,13 +19,10 @@ class InterpretedExecutionFrame (
     val locals: Locals,
     val exceptions: Stack<ExceptionScope>,
     val breaks: Stack<BreakScope>,
-    val desc: MethodDescriptor
+    override val method: QualifiedMethodSignature
 ): MethodBoundExecutionFrame() {
 
     val decoder = ASTDecoder(this)
-
-    override val method: QualifiedMethodSignature
-        get() = desc.qualifiedSignature
 
     override val isFinished: Boolean
         get() = instructions.isEmpty()
@@ -33,7 +32,7 @@ class InterpretedExecutionFrame (
             return_void.execute(ctx, this)
 
         val instruction = instructions.pop()
-        println("\t$instruction")
+        if (ExecutionLogging.isEnabled) println("\t$instruction")
 
         try {
             instruction.execute(ctx, this)
@@ -61,7 +60,9 @@ class InterpretedExecutionFrame (
 }
 
 class ExceptionScope (
-    val handles: List<ExceptionHandle>
+    val handles: List<ExceptionHandle>,
+    val stackSize: Int,
+    val localDepth: Int
 )
 
 class ExceptionHandle (
@@ -70,4 +71,11 @@ class ExceptionHandle (
     val handle: Block
 )
 
-class BreakScope
+class BreakScope (
+    val label: String?,
+    val instructionsSize: Int,
+    val operandsSize: Int,
+    val localDepth: Int,
+    val contInstruction: InterpretedInstruction?,
+    val contValue: StackValue?
+)

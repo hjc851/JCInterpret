@@ -4,7 +4,7 @@ package jcinterpret.core.memory.stack
 //  Concrete Values
 //
 
-abstract class ConcreteValue<T>: StackValue() {
+abstract class ConcreteValue<T: Any>: StackValue() {
     abstract val value: T
     abstract fun number(): Number
 }

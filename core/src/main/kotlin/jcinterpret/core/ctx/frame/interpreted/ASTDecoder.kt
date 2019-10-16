@@ -2,8 +2,8 @@ package jcinterpret.core.ctx.frame.interpreted
 
 import jcinterpret.core.descriptors.qualifiedSignature
 import jcinterpret.core.descriptors.signature
+import jcinterpret.core.memory.stack.StackBoolean
 import jcinterpret.core.memory.stack.StackInt
-import jcinterpret.core.memory.stack.StackValue
 import jcinterpret.signature.ClassTypeSignature
 import jcinterpret.signature.PrimitiveTypeSignature
 import org.eclipse.jdt.core.dom.*
@@ -84,21 +84,78 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
     //  Loops
 
     override fun visit(node: DoStatement): Boolean {
-        TODO()
+
+        val instr = while_loop(node.expression, node.body)
+        val instructionSize = frame.instructions.size
+        var operandsSize = frame.operands.size
+        val localDepth = frame.locals.scopes.size
+
+        push(block_pop)
+        push(break_pop)
+        push(instr)
+        add(node.expression)
+        add(node.body)
+        push(break_push(null, instructionSize, operandsSize, localDepth, instr, StackBoolean(true)))
+        push(block_push)
+
+        return false
     }
 
     override fun visit(node: WhileStatement): Boolean {
-        TODO()
+
+        val instr = while_loop(node.expression, node.body)
+        val instructionSize = frame.instructions.size
+        val operandsSize = frame.operands.size
+        val localDepth = frame.locals.scopes.size
+
+        push(block_pop)
+        push(break_pop)
+        push(instr)
+        add(node.expression)
+        push(break_push(null, instructionSize, operandsSize, localDepth, instr, StackBoolean(true)))
+        push(block_push)
+
+        return false
     }
 
     override fun visit(node: ForStatement): Boolean {
-        TODO()
+        val ids = mutableListOf<String>()
+        node.initializers().forEach {
+            (it as VariableDeclarationExpression)
+            it.fragments().forEach {
+                (it as VariableDeclaration)
+                ids.add(it.name.identifier)
+            }
+        }
+
+        val instr = for_loop(node.expression, node.body, node.updaters() as MutableList<Expression>)
+        val instructionSize = frame.instructions.size
+        val operandsSize = frame.operands.size
+        val localDepth = frame.locals.scopes.size
+
+        push(block_pop)
+        push(break_pop)
+        push(instr)
+        add(node.expression)
+        node.initializers().reversed().forEach { (it as ASTNode).accept(this) }
+        push(break_push(null, instructionSize, operandsSize, localDepth, instr, StackBoolean(true)))
+        push(block_push)
+
+        return false
     }
 
     override fun visit(node: EnhancedForStatement): Boolean {
+
+        val instr = foreach_loop(node.parameter.name.identifier, node.parameter.resolveBinding().type.signature(), node.body)
+        val instructionSize = frame.instructions.size
+        val operandsSize = frame.operands.size
+        val localDepth = frame.locals.scopes.size
+
         push(block_pop)
-        push(iterate(node.parameter.name.identifier, node.parameter.resolveBinding().type.signature(), node.body))
+        push(break_pop)
+        push(instr)
         add(node.expression)
+        push(break_push(null, instructionSize, operandsSize, localDepth, instr, null))
         push(block_push)
 
         return false
@@ -114,7 +171,19 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
     }
 
     override fun visit(node: SwitchStatement): Boolean {
-        TODO()
+
+        val instructionSize = frame.instructions.size
+        val operandsSize = frame.operands.size
+        val localDepth = frame.locals.scopes.size
+
+        push(block_pop)
+        push(break_pop)
+        push(conditional_switch(node.statements() as List<Statement>))
+        add(node.expression)
+        push(break_push(null, instructionSize, operandsSize, localDepth, null, null))
+        push(block_push)
+
+        return false
     }
 
     override fun visit(node: SwitchCase): Boolean {
@@ -126,6 +195,9 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
     override fun visit(node: TryStatement): Boolean {
 
         node.finally?.accept(this)
+
+        val stackSize = frame.instructions.size + 1 // add the scope pop
+        val localsDepth = frame.locals.scopes.size + 1 // add the scope pop
 
         push(block_pop)
         push(excp_pop)
@@ -143,7 +215,7 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
             )
         }
 
-        push(excp_push(handles))
+        push(excp_push(handles, stackSize, localsDepth))
         push(block_push)
 
         return false
@@ -152,15 +224,25 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
     //  Control
 
     override fun visit(node: LabeledStatement): Boolean {
-        TODO()
+        val instructionSize = frame.instructions.size
+        val operandsSize = frame.operands.size
+        val localDepth = frame.locals.scopes.size
+
+        push(break_pop)
+        add(node.body)
+        push(break_push(node.label.identifier, instructionSize, operandsSize, localDepth, null, null))
+
+        return false
     }
 
     override fun visit(node: ContinueStatement): Boolean {
-        TODO()
+        push(continue_statement(node.label?.identifier))
+        return false
     }
 
     override fun visit(node: BreakStatement): Boolean {
-        TODO()
+        push(break_statement(node.label?.identifier))
+        return false
     }
 
     //  Linkage
@@ -225,23 +307,45 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
 
     override fun visit(node: MethodInvocation): Boolean {
         val binding = node.resolveMethodBinding()
+        val qsig = binding.qualifiedSignature()
+
         val isStatic = Modifier.isStatic(binding.modifiers)
 
-        if (binding.isVarargs)
-            TODO()
-
-        if (node.typeArguments().isNotEmpty())
-            TODO()
-
-        if (isStatic) {
-            push(invoke_static(binding.qualifiedSignature()))
-        } else {
-            push(invoke_virtual(binding.qualifiedSignature()))
+        if (binding != binding.methodDeclaration) {
+            if (binding.returnType.signature() !is PrimitiveTypeSignature) {
+                val rsig = binding.returnType.signature()
+                push(cast(rsig))
+            }
         }
 
-        node.arguments()
-            .reversed()
-            .forEach { add(it as Expression) }
+        if (isStatic) {
+            push(invoke_static(qsig))
+        } else {
+            push(invoke_virtual(qsig))
+        }
+
+        if (binding.isVarargs) {
+            val regSize = binding.parameterTypes.size - 1
+
+            for (i in node.arguments().size-1 downTo regSize) {
+                push(arr_store)
+                add(node.arguments()[i] as Expression)
+                push(push(StackInt(i)))
+                push(dup)
+            }
+
+            push(arr_allocate(binding.parameterTypes.last().componentType.signature()))
+
+            node.arguments()
+                .take(regSize)
+                .reversed()
+                .forEach { add(it as Expression) }
+
+        } else {
+            node.arguments()
+                .reversed()
+                .forEach { add(it as Expression) }
+        }
 
         if (!isStatic) {
             if (node.expression != null) {
@@ -267,7 +371,11 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
     }
 
     override fun visit(node: ConstructorInvocation): Boolean {
-        TODO()
+        push(invoke_special(node.resolveConstructorBinding().qualifiedSignature()))
+        node.arguments().reversed().forEach { add(it as Expression) }
+        push(push(load("this")))
+
+        return false
     }
 
     override fun visit(node: SuperConstructorInvocation): Boolean {
@@ -275,17 +383,44 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
     }
 
     override fun visit(node: ArrayCreation): Boolean {
-        TODO()
+
+        if (node.initializer != null) {
+            for (i in node.initializer.expressions().size-1 downTo 0) {
+                val node = node.initializer.expressions()[i] as Expression
+
+                push(arr_store)
+                push(decode_expr(node))
+                push(push(StackInt(i)))
+                push(dup)
+            }
+        }
+
+        push(arr_allocate(node.resolveTypeBinding().componentType.signature()))
+        return false
     }
 
     override fun visit(node: ArrayInitializer): Boolean {
-        TODO()
+
+        for (i in node.expressions().size-1 downTo 0) {
+            val node = node.expressions()[i] as Expression
+
+            push(arr_store)
+            push(decode_expr(node))
+            push(push(StackInt(i)))
+            push(dup)
+        }
+
+        push(arr_allocate(node.resolveTypeBinding().componentType.signature()))
+        return false
     }
 
     //  Conditional
 
     override fun visit(node: ConditionalExpression): Boolean {
-        TODO()
+        push(conditional_ternary(node.thenExpression, node.elseExpression))
+        add(node.expression)
+
+        return false
     }
 
     //  Assignment & Operators
@@ -371,7 +506,9 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
             }
 
             PrefixExpression.Operator.MINUS -> {
-                TODO()
+                push(mul)
+                push(push(StackInt(-1)))
+                add(node.operand, true)
             }
 
             PrefixExpression.Operator.COMPLEMENT -> {
@@ -442,12 +579,20 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
 
         val expressions = (listOf(node.leftOperand, node.rightOperand) + node.extendedOperands()).map { it as Expression }
 
-        for (i in 0 until expressions.size - 1) {
-            push(operator)
-            add(expressions[i], true)
+        push(operator)
+        add(expressions.last(), true)
+
+        if (expressions.size > 2) {
+            expressions.drop(1)
+                .dropLast(1)
+                .reversed()
+                .forEach { expression ->
+                    push(operator)
+                    add(expression, true)
+                }
         }
 
-        add(expressions.last(), true)
+        add(expressions.first())
 
         return false
     }
@@ -455,11 +600,47 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
     //  Accessors
 
     override fun visit(node: ArrayAccess): Boolean {
-        TODO()
+        if (isAssignmentTarget) {
+            push(arr_store_rev)
+            add(node.array)
+            add(node.index)
+        } else {
+            push(arr_load)
+            add(node.index)
+            add(node.array)
+        }
+
+        return false
     }
 
     override fun visit(node: FieldAccess): Boolean {
-        TODO()
+        val binding = node.resolveFieldBinding()
+
+        if (binding.isEnumConstant)
+            TODO()
+
+        if (isAssignmentTarget) {
+            if (Modifier.isStatic(binding.modifiers)) {
+                push(stat_put(binding.declaringClass.signature() as ClassTypeSignature, node.name.identifier, node.resolveTypeBinding().signature()))
+            } else {
+                push(obj_put(binding.name, binding.type.signature()))
+                if (node.expression != null) add(node.expression)
+                else push(load("this"))
+            }
+        } else {
+            if (node.expression.resolveTypeBinding().isArray && node.name.identifier == "length") {
+                push(arr_length)
+                node.expression.accept(this)
+            } else if (Modifier.isStatic(binding.modifiers)) {
+                push(stat_get(binding.declaringClass.signature() as ClassTypeSignature, node.name.identifier, node.resolveTypeBinding().signature()))
+            } else {
+                push(obj_get(binding.name, binding.type.signature()))
+                if (node.expression != null) add(node.expression)
+                else push(load("this"))
+            }
+        }
+
+        return false
     }
 
     override fun visit(node: SuperFieldAccess): Boolean {
@@ -477,7 +658,7 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
                     push(store(node.identifier, type.signature()))
                 } else if (binding.isField) {
                     if (Modifier.isStatic(binding.modifiers)) {
-                        push(stat_put(binding.declaringClass.signature(), node.identifier, type.signature()))
+                        push(stat_put(binding.declaringClass.signature() as ClassTypeSignature, node.identifier, type.signature()))
                     } else {
                         val typeOfThis = frame.locals.typeOf("this").signature
                         val decClass = binding.declaringClass.signature()
@@ -504,7 +685,7 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
                     push(load(node.identifier, type.signature()))
                 } else if (binding.isField) {
                     if (Modifier.isStatic(binding.modifiers)) {
-                        push(stat_get(binding.declaringClass.signature(), node.identifier, type.signature()))
+                        push(stat_get(binding.declaringClass.signature() as ClassTypeSignature, node.identifier, type.signature()))
                     } else {
                         val typeOfThis = frame.locals.typeOf("this").signature
                         val decClass = binding.declaringClass.signature()
@@ -530,7 +711,48 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
     }
 
     override fun visit(node: QualifiedName): Boolean {
-        TODO()
+        val binding = node.resolveBinding()
+
+        if (isAssignmentTarget) {
+            if (binding is IVariableBinding) {
+                if (binding.isField) {
+                    if (Modifier.isStatic(binding.modifiers)) {
+                        push(stat_put(binding.declaringClass.signature() as ClassTypeSignature, node.name.identifier, node.resolveTypeBinding().signature()))
+                    } else {
+                        push(obj_put(binding.name, binding.type.signature()))
+                        if (node.qualifier != null) add(node.qualifier)
+                        else push(load("this"))
+                    }
+                } else {
+                    TODO()
+                }
+            } else {
+                TODO()
+            }
+        } else {
+            if (node.qualifier.resolveTypeBinding().isArray && node.name.identifier == "length") {
+                push(arr_length)
+                node.qualifier.accept(this)
+            } else if (binding is IVariableBinding) {
+                if (binding.isEnumConstant) {
+                    push(stat_get(binding.declaringClass.signature() as ClassTypeSignature, node.name.identifier, node.resolveTypeBinding().signature()))
+                } else if (binding.isField) {
+                    if (Modifier.isStatic(binding.modifiers)) {
+                        push(stat_get(binding.declaringClass.signature() as ClassTypeSignature, node.name.identifier, node.resolveTypeBinding().signature()))
+                    } else {
+                        push(obj_get(binding.name, binding.type.signature()))
+                        if (node.qualifier != null) add(node.qualifier)
+                        else push(load("this"))
+                    }
+                } else {
+                    TODO()
+                }
+            } else {
+                TODO()
+            }
+        }
+
+        return false
     }
 
     //  Literals

@@ -9,8 +9,9 @@ import jcinterpret.signature.TypeSignature
 abstract class BoxedObject<T> (
     id: Int,
     type: ClassTypeSignature,
-    value: T
+    val value: T
 ): ObjectType(id, type, mutableMapOf()) {
+
     override fun getField(name: String, type: TypeSignature, ctx: ExecutionContext): Field {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
@@ -36,6 +37,8 @@ class BoxedStackValueObject (
 abstract class StringValue
 data class ConcreteStringValue(val value: String): StringValue()
 data class SymbolicStringValue(val value: Int): StringValue()
+data class StackValueStringValue(val value: StackValue): StringValue()
+data class CompositeStringValue(val lhs: StringValue, val rhs: StringValue): StringValue()
 
 class BoxedStringObject (
     id: Int,

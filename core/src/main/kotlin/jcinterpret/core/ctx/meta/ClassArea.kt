@@ -19,7 +19,11 @@ class ClassArea (
     fun isClassLoaded(sig: String): Boolean = classes.containsKey(sig)
 
     fun getClass(sig: ClassTypeSignature): ClassType = getClass(sig.toString())
-    fun getClass(lookupType: String): ClassType = classes[lookupType]!!
+    fun getClass(lookupType: String): ClassType = try {
+        classes[lookupType]!!
+    } catch (e: Exception) {
+        throw e
+    }
 
     fun buildClassLoaderFrame(sigs: Set<ClassTypeSignature>): SyntheticExecutionFrame {
         val instructions = Stack<SyntheticInstruction>()
@@ -40,7 +44,7 @@ class ClassArea (
 
         val staticFields = cls.fields.values
             .filter { it.isStatic }
-            .map { it.name to Field(it.name, it.type, ctx.descriptorLibrary.getDescriptor(it.type).defaultValue) }
+            .map { it.name to Field(it.name, it.type, ctx.heapArea.allocateSymbolic(ctx, it.type)) }
             .toMap().toMutableMap()
 
         val staticMethods = cls.methods.values

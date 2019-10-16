@@ -11,7 +11,12 @@ abstract class ReferenceValue(): StackValue() {
         get() = StackType.REFERENCE
 }
 
-data class StackReference(override val id: Int): ReferenceValue()
+data class StackReference(override val id: Int): ReferenceValue() {
+    init {
+        if (id == 28)
+            println("BAD")
+    }
+}
 
 object StackNil: ReferenceValue() {
     override val id: Int

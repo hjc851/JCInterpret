@@ -11,7 +11,8 @@ class ReturnException(val value: StackValue?, val method: QualifiedMethodSignatu
 
 class ThrowException(val ref: StackReference): JCException()
 
-class BreakException(val label: String?): JCException()
+//class BreakException(val label: String?): JCException()
+//class ContinueException(val label: String?): JCException()
 
 class HaltException(val msg: String): JCException()
 

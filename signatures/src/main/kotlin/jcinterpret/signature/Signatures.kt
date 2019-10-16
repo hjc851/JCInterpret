@@ -58,7 +58,7 @@ data class ClassTypeSignature(val className: String) : ReferenceTypeSignature() 
     }
 
     init {
-        if (className.startsWith("L") || className.endsWith(";") || className.contains("["))
+        if ((className.startsWith("L") && className.endsWith(";")) || className.contains("["))
             throw IllegalArgumentException("Invalid class name format")
     }
 

@@ -4,6 +4,7 @@ import jcinterpret.signature.ClassTypeSignature
 import jcinterpret.signature.QualifiedMethodSignature
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration
 import org.eclipse.jdt.core.dom.CompilationUnit
+import java.lang.Exception
 
 class BindingDescriptorResolver (
     compilationUnits: List<CompilationUnit>
@@ -16,8 +17,13 @@ class BindingDescriptorResolver (
             for (type in cu.types()) {
                 type as AbstractTypeDeclaration
 
-                val desc = TypeBindingClassTypeDescriptor(type.resolveBinding())
-                classes[desc.signature] = desc
+                try {
+                    val desc = TypeBindingClassTypeDescriptor(type.resolveBinding())
+                    classes[desc.signature] = desc
+                } catch (e: Exception) {
+                    cu.messages.forEach { println(it) }
+                    throw e
+                }
             }
         }
     }

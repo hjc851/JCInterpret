@@ -1,7 +1,9 @@
 package jcinterpret.core.ctx.meta
 
+import jcinterpret.core.control.HaltException
 import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.memory.heap.*
+import jcinterpret.core.memory.stack.ReferenceValue
 import jcinterpret.core.memory.stack.StackReference
 import jcinterpret.core.memory.stack.StackValue
 import jcinterpret.core.memory.stack.SymbolicValue
@@ -16,6 +18,7 @@ class HeapArea (
     //
     //  Validate counter must be greater than 0
     //
+
     init {
         if (counter.get() <= 0)
             throw IllegalStateException("Heap counter cannot be less than 1")
@@ -67,9 +70,10 @@ class HeapArea (
         return arr
     }
 
-    private fun allocateSymbolicBoxedObject(ctx: ExecutionContext, objType: ClassTypeSignature, type: PrimitiveTypeSignature): BoxedStackValueObject {
+    fun allocateSymbolicBoxedObject(ctx: ExecutionContext, objType: ClassTypeSignature, type: PrimitiveTypeSignature): BoxedStackValueObject {
         val symbol = allocateSymbol(ctx, type)
         val obj = BoxedStackValueObject(counter.getAndIncrement(), objType, symbol)
+        storage[obj.id] = obj
         return obj
     }
 
@@ -88,9 +92,9 @@ class HeapArea (
         return storage[id] as BoxedStringObject
     }
 
-    private fun allocateSymbolicString(ctx: ExecutionContext): BoxedStringObject {
+    fun allocateSymbolicString(ctx: ExecutionContext, value: StringValue? = null): BoxedStringObject {
         val id = counter.getAndIncrement()
-        val value = SymbolicStringValue(counter.getAndIncrement())
+        val value = value ?: SymbolicStringValue(counter.getAndIncrement())
 
         val obj = BoxedStringObject(id, ClassTypeSignature("java/lang/String"), value)
         storage[id] = obj
@@ -127,19 +131,25 @@ class HeapArea (
             type.toString() == ("Ljava/lang/String;")    -> BoxedStringObject(id, type as ClassTypeSignature, SymbolicStringValue(counter.getAndIncrement()))
 
             type is ArrayTypeSignature -> SymbolicArray(id, type, mutableMapOf(), allocateSymbol(ctx, PrimitiveTypeSignature.INT))
-            type is ClassTypeSignature -> TODO()
+
+            type is ClassTypeSignature -> SymbolicObject(id, type, existing.fields)
 
             else -> TODO()
         }
 
         existing.fields.toMap(obj.fields)
-        storage[id] = obj
+        storage[obj.id] = obj
     }
 
     //
     //  Deref
     //
 
-    fun dereference(ref: StackReference): HeapValue = dereference(ref.id)
-    fun dereference(id: Int): HeapValue = storage[id]!!
+    fun dereference(ref: ReferenceValue): HeapValue = dereference(ref.id)
+    fun dereference(id: Int): HeapValue {
+        if (id == 0)
+            throw HaltException("Null pointer exception")
+        else
+            return storage[id]!!
+    }
 }

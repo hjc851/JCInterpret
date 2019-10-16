@@ -71,6 +71,9 @@ class SymbolicArray (
     override val lookupType: ClassTypeSignature
         get() = ClassTypeSignature.OBJECT
 
+    val componentType: TypeSignature
+        get() = (type as ArrayTypeSignature).componentType
+
     fun put(index: StackValue, value: StackValue, type: TypeSignature, ctx: ExecutionContext) {
         storage[index] = value
     }

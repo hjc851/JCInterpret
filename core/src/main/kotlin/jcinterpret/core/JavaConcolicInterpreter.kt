@@ -12,6 +12,7 @@ class JavaConcolicInterpreter internal constructor (
         val traces = mutableListOf<ExecutionTrace>()
         while (contexts.isNotEmpty()) {
             val ctx = contexts.removeAt(0)
+            println("\t\tContexts remaining: ${contexts.size}, Traces produced: ${traces.size}")
             val trace = ctx.execute()
             traces.add(trace)
         }

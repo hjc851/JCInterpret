@@ -3,6 +3,7 @@ package jcinterpret.core.ctx.meta
 import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.ctx.frame.interpreted.*
 import jcinterpret.core.descriptors.MethodDescriptor
+import jcinterpret.core.memory.stack.ReferenceValue
 import jcinterpret.core.memory.stack.StackReference
 import jcinterpret.core.memory.stack.StackValue
 import jcinterpret.core.trace.TracerRecord
@@ -19,11 +20,13 @@ abstract class Method(val desc: MethodDescriptor) {
     val sig: QualifiedMethodSignature
         get() = desc.qualifiedSignature
 
-    abstract fun invoke(ctx: ExecutionContext, selfRef: StackReference?, params: Array<StackValue>)
+    abstract fun invoke(ctx: ExecutionContext, selfRef: ReferenceValue?, params: Array<StackValue>)
 }
 
+val MAX_RECURSIVE_CALL_COUNT = 5
+
 class InterpretedMethod(desc: MethodDescriptor, val decl: MethodDeclaration): Method(desc) {
-    override fun invoke(ctx: ExecutionContext, selfRef: StackReference?, params: Array<StackValue>) {
+    override fun invoke(ctx: ExecutionContext, selfRef: ReferenceValue?, params: Array<StackValue>) {
 
         val instructions = Stack<InterpretedInstruction>()
         val operands = Stack<StackValue>()
@@ -44,8 +47,8 @@ class InterpretedMethod(desc: MethodDescriptor, val decl: MethodDeclaration): Me
             val ptype = sig.methodSignature.typeSignature.argumentTypes[i]
             val param = params[i]
 
-            if (ptype is PrimitiveTypeSignature && param is StackReference ||
-                ptype is ReferenceTypeSignature && param !is StackReference)
+            if (ptype is PrimitiveTypeSignature && param is ReferenceValue ||
+                ptype is ReferenceTypeSignature && param !is ReferenceValue)
                 TODO("Handle boxing")
 
             if (declaredParameter.isVarargs)
@@ -58,13 +61,35 @@ class InterpretedMethod(desc: MethodDescriptor, val decl: MethodDeclaration): Me
 
         instructions.push(decode_stmt(decl.body))
 
-        val frame = InterpretedExecutionFrame(instructions, operands, locals, exceptionScopes, breakScopes, desc)
-        ctx.frames.push(frame)
+        val callCount = ctx.countMethodOccuranceInCallStack(sig)
+        val returnType = sig.methodSignature.typeSignature.returnType
+        if (callCount > MAX_RECURSIVE_CALL_COUNT) {
+            val result: StackValue?
+
+            if (returnType != PrimitiveTypeSignature.VOID) {
+                val signature = desc.qualifiedSignature
+                val declaringClass = signature.declaringClassSignature
+
+                result = if (selfRef != null && declaringClass == returnType) selfRef
+                else ctx.heapArea.allocateSymbolic(ctx, returnType)
+            } else {
+                result = null
+            }
+
+            if (result != null)
+                ctx.currentFrame.push(result)
+
+            if (desc.isStatic) ctx.records.add(TracerRecord.StaticLibraryMethodCall(desc.qualifiedSignature, params, result))
+            else ctx.records.add(TracerRecord.InstanceLibraryMethodCall(desc.qualifiedSignature, selfRef!!, params, result))
+        } else {
+            val frame = InterpretedExecutionFrame(instructions, operands, locals, exceptionScopes, breakScopes, desc.qualifiedSignature)
+            ctx.frames.push(frame)
+        }
     }
 }
 
 class OpaqueMethod(desc: MethodDescriptor): Method(desc) {
-    override fun invoke(ctx: ExecutionContext, selfRef: StackReference?, params: Array<StackValue>) {
+    override fun invoke(ctx: ExecutionContext, selfRef: ReferenceValue?, params: Array<StackValue>) {
 
         if (desc.isStatic && selfRef != null)
             throw IllegalStateException("Attempting to call static method with this value")

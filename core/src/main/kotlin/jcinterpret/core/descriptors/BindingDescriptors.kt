@@ -24,7 +24,8 @@ class TypeBindingClassTypeDescriptor (
     override val methods: Map<String, MethodDescriptor>
 
     init {
-        if (!binding.isClass) throw IllegalArgumentException("${binding.qualifiedName} is not a class type")
+        if (!(binding.isClass || binding.isInterface || binding.isEnum))
+            throw IllegalArgumentException("${binding.qualifiedName} is not a class type")
 
         this.signature = binding.signature() as ClassTypeSignature
 

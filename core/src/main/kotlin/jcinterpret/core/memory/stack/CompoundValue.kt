@@ -10,14 +10,16 @@ class NotValue (val value: StackValue): ComputedValue() {
     override val type: StackType get() = value.type
 }
 
-class BinaryValue(val lhs: StackValue, val rhs: StackValue, override val type: StackType, val operator: BinaryOperator): ComputedValue()
+class CastValue (val value: StackValue, override val type: StackType): ComputedValue()
+
+class BinaryOperationValue(val lhs: StackValue, val rhs: StackValue, override val type: StackType, val operator: BinaryOperator): ComputedValue()
 
 enum class BinaryOperator {
     ADD,
     SUB,
     MUL,
     DIV,
-    REM,
+    MOD,
 
     LSHIFT,
     RSHIFT,
@@ -33,5 +35,7 @@ enum class BinaryOperator {
     LESS,
     GREATER,
     LESSEQUALS,
-    GREATEREQUALS
+    GREATEREQUALS,
+
+    CONCAT
 }
