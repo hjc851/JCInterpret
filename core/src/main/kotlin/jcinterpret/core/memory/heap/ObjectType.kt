@@ -1,5 +1,7 @@
 package jcinterpret.core.memory.heap
 
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.memory.stack.StackValue
 import jcinterpret.core.memory.stack.SymbolicValue
@@ -9,6 +11,13 @@ import jcinterpret.signature.ClassTypeSignature
 import jcinterpret.signature.ReferenceTypeSignature
 import jcinterpret.signature.TypeSignature
 
+@JsonSubTypes (
+    JsonSubTypes.Type(ConcreteObject::class),
+    JsonSubTypes.Type(SymbolicObject::class),
+    JsonSubTypes.Type(SymbolicArray::class),
+    JsonSubTypes.Type(BoxedObject::class)
+)
+@JsonTypeInfo(use= JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")
 abstract class ObjectType (
     override val id: Int,
     override val type: ReferenceTypeSignature,
@@ -28,6 +37,7 @@ abstract class ObjectType (
     }
 }
 
+@JsonTypeInfo(use= JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")
 class ConcreteObject (
     id: Int,
     type: ClassTypeSignature,
@@ -44,6 +54,7 @@ class ConcreteObject (
     }
 }
 
+@JsonTypeInfo(use= JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")
 class SymbolicObject (
     id: Int,
     type: ClassTypeSignature,
@@ -56,12 +67,13 @@ class SymbolicObject (
         return fields.getOrPut(name) {
             val desc = ctx.descriptorLibrary.getDescriptor(type)
             val value = ctx.heapArea.allocateSymbolic(ctx, type)
-            ctx.records.add(TracerRecord.ObjectFieldPut(this.ref(), name, type, desc.defaultValue, value))
+            ctx.records.add(TracerRecord.DefaultInstanceFieldValue(this.ref(), name, value))
             Field(name, type, value)
         }
     }
 }
 
+@JsonTypeInfo(use= JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")
 class SymbolicArray (
     id: Int,
     type: ArrayTypeSignature,

@@ -1,6 +1,6 @@
 rootProject.name = 'JCInterpret'
 include 'algorithms'
-include 'config'
+include 'documents'
 include 'core'
 include 'entry'
 include 'parser'

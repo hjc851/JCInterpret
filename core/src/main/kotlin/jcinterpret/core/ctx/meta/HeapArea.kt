@@ -5,20 +5,30 @@ import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.memory.heap.*
 import jcinterpret.core.memory.stack.*
 import jcinterpret.signature.*
-import java.util.concurrent.atomic.AtomicInteger
+import java.io.Serializable
 
 class HeapArea (
-    val counter: AtomicInteger,
+    private var counter: Int,
     val storage: MutableMap<Int, HeapValue>,
     val literalRefs: MutableMap<Any, Int>
-) {
+): Serializable {
+    
     //
-    //  Validate counter must be greater than 0
+    //  Counter
     //
 
     init {
-        if (counter.get() <= 0)
-            throw IllegalStateException("Heap counter cannot be less than 1")
+        if (counter <= 0) throw IllegalArgumentException("Heap counter must not be <= 0")
+    }
+
+    @Synchronized
+    fun currentId(): Int {
+        return counter
+    }
+
+    @Synchronized
+    fun nextId(): Int {
+        return counter++
     }
 
     //
@@ -37,7 +47,7 @@ class HeapArea (
 
     fun allocateSymbol(ctx: ExecutionContext, type: PrimitiveTypeSignature): SymbolicValue {
         val desc = ctx.descriptorLibrary.getDescriptor(type)
-        return SymbolicValue(counter.getAndIncrement(), desc.stackType)
+        return SymbolicValue(nextId(), desc.stackType)
     }
 
     fun allocateSymbolicObject(ctx: ExecutionContext, type: ClassTypeSignature): ObjectType {
@@ -53,7 +63,7 @@ class HeapArea (
 
             type.className == "java/lang/String"    -> allocateSymbolicString(ctx)
 
-            else -> SymbolicObject(counter.getAndIncrement(), type, mutableMapOf())
+            else -> SymbolicObject(nextId(), type, mutableMapOf())
         }
 
         storage[obj.id] = obj
@@ -65,7 +75,7 @@ class HeapArea (
 
         if (id == null) {
             val type = boxedTypeForStackType(value.type)
-            id = counter.getAndIncrement()
+            id = nextId()
             val obj = BoxedStackValueObject(id, type, value)
 
             storage[id] = obj
@@ -91,7 +101,7 @@ class HeapArea (
     }
 
     fun allocateSymbolicArray(ctx: ExecutionContext, type: ArrayTypeSignature): SymbolicArray {
-        val id = counter.getAndIncrement()
+        val id = nextId()
         val arr = SymbolicArray(id, type, mutableMapOf(), allocateSymbol(ctx, PrimitiveTypeSignature.INT))
         storage[id] = arr
         return arr
@@ -99,7 +109,7 @@ class HeapArea (
 
     fun allocateSymbolicBoxedObject(ctx: ExecutionContext, objType: ClassTypeSignature, type: PrimitiveTypeSignature): BoxedStackValueObject {
         val symbol = allocateSymbol(ctx, type)
-        val obj = BoxedStackValueObject(counter.getAndIncrement(), objType, symbol)
+        val obj = BoxedStackValueObject(nextId(), objType, symbol)
         storage[obj.id] = obj
         return obj
     }
@@ -109,7 +119,7 @@ class HeapArea (
 
         if (id == null) {
             val value = ConcreteStringValue(str)
-            val obj = BoxedStringObject(counter.getAndIncrement(), ClassTypeSignature("java/lang/String"), value)
+            val obj = BoxedStringObject(nextId(), ClassTypeSignature("java/lang/String"), value)
             id = obj.id
 
             literalRefs[str] = id
@@ -123,7 +133,7 @@ class HeapArea (
         var id = literalRefs[type]
 
         if (id == null) {
-            id = counter.getAndIncrement()
+            id = nextId()
             val obj = ClassObject(id, ClassTypeSignature("java/lang/Class"), type)
 
             storage[id] = obj
@@ -134,8 +144,8 @@ class HeapArea (
     }
 
     fun allocateSymbolicString(ctx: ExecutionContext, value: StringValue? = null): BoxedStringObject {
-        val id = counter.getAndIncrement()
-        val value = value ?: SymbolicStringValue(counter.getAndIncrement())
+        val id = nextId()
+        val value = value ?: SymbolicStringValue(nextId())
 
         val obj = BoxedStringObject(id, ClassTypeSignature("java/lang/String"), value)
         storage[id] = obj
@@ -152,7 +162,7 @@ class HeapArea (
         if (type.className == "java/lang/String")
             return getOrAllocateString("")
 
-        val id = counter.getAndIncrement()
+        val id = nextId()
         val obj = ConcreteObject(id, type, mutableMapOf())
         storage[id] = obj
         return obj
@@ -177,7 +187,7 @@ class HeapArea (
             type == BoxedTypeSignature.FLOAT        -> BoxedStackValueObject(id, type as ClassTypeSignature, allocateSymbol(ctx, PrimitiveTypeSignature.FLOAT))
             type == BoxedTypeSignature.DOUBLE       -> BoxedStackValueObject(id, type as ClassTypeSignature, allocateSymbol(ctx, PrimitiveTypeSignature.DOUBLE))
 
-            type.toString() == "Ljava/lang/String;"     -> BoxedStringObject(id, type as ClassTypeSignature, SymbolicStringValue(counter.getAndIncrement()))
+            type.toString() == "Ljava/lang/String;"     -> BoxedStringObject(id, type as ClassTypeSignature, SymbolicStringValue(nextId()))
             type.toString() == "Ljava/lang/Class;"      -> TODO()
 
             type is ArrayTypeSignature -> SymbolicArray(id, type, mutableMapOf(), allocateSymbol(ctx, PrimitiveTypeSignature.INT))

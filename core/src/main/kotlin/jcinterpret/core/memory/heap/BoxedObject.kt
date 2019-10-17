@@ -1,12 +1,20 @@
 package jcinterpret.core.memory.heap
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.memory.stack.StackValue
-import jcinterpret.core.memory.stack.SymbolicValue
 import jcinterpret.signature.ClassTypeSignature
 import jcinterpret.signature.TypeSignature
-import sun.reflect.generics.reflectiveObjects.NotImplementedException
+import java.io.Serializable
+import javax.xml.bind.annotation.XmlSeeAlso
+import javax.xml.bind.annotation.XmlType
 
+@XmlSeeAlso (
+    BoxedStackValueObject::class,
+    BoxedStringObject::class,
+    ClassObject::class
+)
+@JsonTypeInfo(use= JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")
 abstract class BoxedObject<T> (
     id: Int,
     type: ClassTypeSignature,
@@ -22,6 +30,8 @@ abstract class BoxedObject<T> (
 //  Stack Values
 //
 
+@XmlType(name = "BoxedStackValueObject")
+@JsonTypeInfo(use= JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")
 class BoxedStackValueObject (
     id: Int,
     type: ClassTypeSignature,
@@ -35,12 +45,22 @@ class BoxedStackValueObject (
 //  String Values
 //
 
-abstract class StringValue
-data class ConcreteStringValue(val value: String): StringValue()
-data class SymbolicStringValue(val value: Int): StringValue()
-data class StackValueStringValue(val value: StackValue): StringValue()
-data class CompositeStringValue(val lhs: StringValue, val rhs: StringValue): StringValue()
+@XmlSeeAlso (
+    ConcreteStringValue::class,
+    SymbolicStringValue::class,
+    StackValueStringValue::class,
+    CompositeStringValue::class
+)
+@JsonTypeInfo(use= JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")
+abstract class StringValue: Serializable
 
+@XmlType(name = "ConcreteStringValue") data class ConcreteStringValue(val value: String): StringValue()
+@XmlType(name = "SymbolicStringValue") data class SymbolicStringValue(val value: Int): StringValue()
+@XmlType(name = "StackValueStringValue") data class StackValueStringValue(val value: StackValue): StringValue()
+@XmlType(name = "CompositeStringValue") data class CompositeStringValue(val lhs: StringValue, val rhs: StringValue): StringValue()
+
+@XmlType(name = "BoxedStringObject")
+@JsonTypeInfo(use= JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")
 class BoxedStringObject (
     id: Int,
     type: ClassTypeSignature,
@@ -54,6 +74,8 @@ class BoxedStringObject (
 //  Class Value
 //
 
+@XmlType(name = "ClassObject")
+@JsonTypeInfo(use= JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")
 class ClassObject (
     id: Int,
     type: ClassTypeSignature,

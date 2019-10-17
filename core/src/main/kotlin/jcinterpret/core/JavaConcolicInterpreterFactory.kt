@@ -73,7 +73,7 @@ object JavaConcolicInterpreterFactory {
             mutableListOf(),
             descLibrary,
             srcLibrary,
-            HeapArea(AtomicInteger(1), mutableMapOf(), mutableMapOf()),
+            HeapArea((1), mutableMapOf(), mutableMapOf()),
             ClassArea(mutableMapOf()),
             NativeArea(),
             frames

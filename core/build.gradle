@@ -20,6 +20,9 @@ dependencies {
     
     implementation group: 'org.eclipse.jdt', name: 'org.eclipse.jdt.core', version: '3.15.+'
 
+    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.6'
+    implementation "com.fasterxml.jackson.core:jackson-annotations:2.9.0"
+
     testImplementation group: 'junit', name: 'junit', version: '4.12'
 }
 

@@ -1,16 +1,14 @@
 package jcinterpret.core.ctx.meta
 
+import jcinterpret.core.ExecutionConfig
 import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.ctx.frame.interpreted.*
 import jcinterpret.core.descriptors.MethodDescriptor
 import jcinterpret.core.memory.stack.ReferenceValue
-import jcinterpret.core.memory.stack.StackReference
 import jcinterpret.core.memory.stack.StackValue
 import jcinterpret.core.trace.TracerRecord
 import jcinterpret.signature.PrimitiveTypeSignature
 import jcinterpret.signature.QualifiedMethodSignature
-import jcinterpret.signature.ReferenceTypeSignature
-import org.eclipse.jdt.core.dom.BodyDeclaration
 import org.eclipse.jdt.core.dom.MethodDeclaration
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration
 import java.util.*
@@ -22,8 +20,6 @@ abstract class Method(val desc: MethodDescriptor) {
 
     abstract fun invoke(ctx: ExecutionContext, selfRef: ReferenceValue?, params: Array<StackValue>)
 }
-
-val MAX_RECURSIVE_CALL_COUNT = 1
 
 class InterpretedMethod(desc: MethodDescriptor, val decl: MethodDeclaration): Method(desc) {
     override fun invoke(ctx: ExecutionContext, selfRef: ReferenceValue?, params: Array<StackValue>) {
@@ -54,9 +50,9 @@ class InterpretedMethod(desc: MethodDescriptor, val decl: MethodDeclaration): Me
 
         instructions.push(decode_stmt(decl.body))
 
-        val callCount = ctx.countMethodOccuranceInCallStack(sig)
+        val callCount = ctx.countMethodOccurenceInCallStack(sig)
         val returnType = sig.methodSignature.typeSignature.returnType
-        if (callCount > MAX_RECURSIVE_CALL_COUNT) {
+        if (callCount > ExecutionConfig.maxRecursiveCalls) {
             val result: StackValue?
 
             if (returnType != PrimitiveTypeSignature.VOID) {
@@ -69,8 +65,10 @@ class InterpretedMethod(desc: MethodDescriptor, val decl: MethodDeclaration): Me
                 result = null
             }
 
-            if (result != null)
+            if (result != null) {
                 ctx.currentFrame.push(result)
+                ctx.records.add(TracerRecord.SynthesisedReturnValue(desc.qualifiedSignature, result))
+            }
 
             if (desc.isStatic) ctx.records.add(TracerRecord.StaticLibraryMethodCall(desc.qualifiedSignature, params, result))
             else ctx.records.add(TracerRecord.InstanceLibraryMethodCall(desc.qualifiedSignature, selfRef!!, params, result))
@@ -85,7 +83,6 @@ class OpaqueMethod(desc: MethodDescriptor): Method(desc) {
     override fun invoke(ctx: ExecutionContext, selfRef: ReferenceValue?, params: Array<StackValue>) {
 
         val returnType = desc.signature.typeSignature.returnType
-        val frame = ctx.currentFrame
         val result: StackValue?
 
         if (returnType != PrimitiveTypeSignature.VOID) {
@@ -98,8 +95,10 @@ class OpaqueMethod(desc: MethodDescriptor): Method(desc) {
             result = null
         }
 
-        if (result != null)
-            frame.push(result)
+        if (result != null) {
+            ctx.currentFrame.push(result)
+            ctx.records.add(TracerRecord.SynthesisedReturnValue(desc.qualifiedSignature, result))
+        }
 
         if (desc.isStatic) ctx.records.add(TracerRecord.StaticLibraryMethodCall(desc.qualifiedSignature, params, result))
         else ctx.records.add(TracerRecord.InstanceLibraryMethodCall(desc.qualifiedSignature, selfRef!!, params, result))

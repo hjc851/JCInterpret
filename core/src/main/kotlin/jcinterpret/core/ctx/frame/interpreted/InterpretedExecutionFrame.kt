@@ -1,13 +1,10 @@
 package jcinterpret.core.ctx.frame.interpreted
 
-import jcinterpret.core.ExecutionLogging
+import jcinterpret.core.ExecutionConfig
 import jcinterpret.core.control.ClassAreaFault
 import jcinterpret.core.control.HaltException
 import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.ctx.frame.MethodBoundExecutionFrame
-import jcinterpret.core.ctx.frame.synthetic.ReturnVoid
-import jcinterpret.core.ctx.frame.synthetic.SyntheticInstruction
-import jcinterpret.core.descriptors.MethodDescriptor
 import jcinterpret.core.memory.stack.StackValue
 import jcinterpret.signature.ClassTypeSignature
 import jcinterpret.signature.PrimitiveTypeSignature
@@ -39,7 +36,7 @@ class InterpretedExecutionFrame (
         }
 
         val instruction = instructions.pop()
-        if (ExecutionLogging.isEnabled) println("\t$instruction")
+        if (ExecutionConfig.loggingEnabled) println("\t$instruction")
 
         try {
             instruction.execute(ctx, this)

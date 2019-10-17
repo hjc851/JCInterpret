@@ -727,14 +727,8 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
                     if (Modifier.isStatic(binding.modifiers)) {
                         push(stat_put(binding.declaringClass.signature() as ClassTypeSignature, node.identifier, type.signature()))
                     } else {
-                        val typeOfThis = frame.locals.typeOf("this").signature
-                        val decClass = binding.declaringClass.signature()
-                        if (typeOfThis == decClass) {
-                            push(obj_put(node.identifier, type.signature()))
-                            push(load("this"))
-                        } else {
-                            TODO()
-                        }
+                        push(obj_put(node.identifier, type.signature()))
+                        push(load("this"))
                     }
                 } else if (binding.isEnumConstant) {
                     TODO()
@@ -754,14 +748,8 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
                     if (Modifier.isStatic(binding.modifiers)) {
                         push(stat_get(binding.declaringClass.signature() as ClassTypeSignature, node.identifier, type.signature()))
                     } else {
-                        val typeOfThis = frame.locals.typeOf("this").signature
-                        val decClass = binding.declaringClass.signature()
-                        if (typeOfThis == decClass) {
-                            push(obj_get(node.identifier, type.signature()))
-                            push(load("this"))
-                        } else {
-                            TODO()
-                        }
+                        push(obj_get(node.identifier, type.signature()))
+                        push(load("this"))
                     }
                 } else if (binding.isEnumConstant) {
                     TODO()

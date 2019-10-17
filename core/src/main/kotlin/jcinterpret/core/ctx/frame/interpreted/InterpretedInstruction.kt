@@ -1,5 +1,6 @@
 package jcinterpret.core.ctx.frame.interpreted
 
+import jcinterpret.core.ExecutionConfig
 import jcinterpret.core.control.ReturnException
 import jcinterpret.core.control.ThrowException
 import jcinterpret.core.ctx.ExecutionContext
@@ -727,7 +728,7 @@ object equals: InterpretedInstruction() {
         val lhs = frame.pop()
 
         val value = if (lhs is ReferenceValue && rhs is ReferenceValue) {
-            val result = lhs.id != rhs.id
+            val result = lhs.id == rhs.id
             StackBoolean(result)
         } else if (lhs is ReferenceValue && rhs !is ReferenceValue) {
             ObjectOperatorUtils.equals(lhs, rhs, ctx)
@@ -1013,8 +1014,6 @@ class foreach_loop(val variable: String, val type: TypeSignature, val body: Stat
     }
 }
 
-val MAX_LOOP_ITERATIONS = 10
-
 class for_loop(val condition: Expression, val body: Statement, val updaters: MutableList<Expression>): InterpretedInstruction() {
 
     var counter = 0
@@ -1022,7 +1021,7 @@ class for_loop(val condition: Expression, val body: Statement, val updaters: Mut
     override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
         val result = frame.pop()
 
-        if (counter < MAX_LOOP_ITERATIONS) {
+        if (counter < ExecutionConfig.maxLoopExecutions) {
             if (result is StackBoolean) {
                 if (result.value) {
                     frame.instructions.push(this)
@@ -1048,7 +1047,7 @@ class while_loop(val condition: Expression, val body: Statement): InterpretedIns
     override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
         val result = frame.pop()
 
-        if (counter < MAX_LOOP_ITERATIONS) {
+        if (counter < ExecutionConfig.maxLoopExecutions) {
             if (result is StackBoolean) {
                 if (result.value) {
                     frame.instructions.push(this)
@@ -1080,11 +1079,10 @@ class conditional_if(val then: Statement, val otherwise: Statement?): Interprete
             }
         } else {
 
-            if (otherwise != null) {
-                ctx.fork {
-                    it.records.add(TracerRecord.Assertion(condition, false))
+            ctx.fork {
+                it.records.add(TracerRecord.Assertion(condition, false))
+                if (otherwise != null)
                     (it.currentFrame as InterpretedExecutionFrame).instructions.push(decode_stmt(otherwise))
-                }
             }
 
             ctx.records.add(TracerRecord.Assertion(condition, true))
@@ -1132,7 +1130,7 @@ class conditional_switch(val statements: List<Statement>): InterpretedInstructio
                 handleStringValue(ctx, frame, value, str)
 
             } else {
-                TODO()
+                TODO("ENUM support for switch")
             }
         } else {
             handleStackValue(ctx, frame, value)
@@ -1226,8 +1224,6 @@ class conditional_switch(val statements: List<Statement>): InterpretedInstructio
                             .reversed()
                             .forEach { frame.instructions.push(decode_stmt(it)) }
 
-                        Unit
-
                     } else {
                         val expr = statement.expression
 
@@ -1242,8 +1238,6 @@ class conditional_switch(val statements: List<Statement>): InterpretedInstructio
                             statements.subList(i+1, statements.size)
                                 .reversed()
                                 .forEach { frame.instructions.push(decode_stmt(it)) }
-
-                            Unit
                         }
                     }
                 }
@@ -1258,8 +1252,6 @@ class conditional_switch(val statements: List<Statement>): InterpretedInstructio
                         val stats = statements.subList(i+1, statements.size)
                         stats.reversed()
                             .forEach { frame.instructions.push(decode_stmt(it)) }
-
-                        Unit
 
                         for (j in i downTo 0) {
                             val reverseStatement = statements[j]
@@ -1277,8 +1269,6 @@ class conditional_switch(val statements: List<Statement>): InterpretedInstructio
                             val stats = statements.subList(i+1, statements.size)
                             stats.reversed()
                                 .forEach { frame.instructions.push(decode_stmt(it)) }
-
-                            Unit
 
                             for (j in i downTo 0) {
                                 val reverseStatement = statements[j]

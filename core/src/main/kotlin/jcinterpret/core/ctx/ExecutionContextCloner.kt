@@ -37,7 +37,7 @@ object ExecutionContextCloner {
     }
 
     fun clone(oldHeap: HeapArea): HeapArea {
-        val counter = AtomicInteger(oldHeap.counter.get())
+        val counter = (oldHeap.currentId())
         val storage = oldHeap.storage.map { it.key to clone(it.value) }.toMap().toMutableMap()
         val literalRefs = oldHeap.literalRefs.toMutableMap()
 

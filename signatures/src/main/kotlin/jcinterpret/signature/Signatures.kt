@@ -1,21 +1,33 @@
 package jcinterpret.signature
 
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import java.io.Serializable
 
+@JsonSubTypes (
+    JsonSubTypes.Type(QualifiedMethodSignature::class),
+    JsonSubTypes.Type(MethodSignature::class),
+    JsonSubTypes.Type(MethodTypeSignature::class),
+    JsonSubTypes.Type(TypeSignature::class)
+)
+@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
 abstract class Signature : Serializable
 
+@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
 data class QualifiedMethodSignature(val declaringClassSignature: ClassTypeSignature, val methodSignature: MethodSignature) : Signature() {
     override fun toString(): String {
         return "$declaringClassSignature$methodSignature"
     }
 }
 
+@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
 data class MethodSignature(val name: String, val typeSignature: MethodTypeSignature) : Signature() {
     override fun toString(): String {
         return "$name$typeSignature"
     }
 }
 
+@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
 data class MethodTypeSignature(val argumentTypes: Array<TypeSignature>, val returnType: TypeSignature) : Signature() {
     override fun toString(): String {
         val builder = StringBuilder()
@@ -48,10 +60,22 @@ data class MethodTypeSignature(val argumentTypes: Array<TypeSignature>, val retu
     }
 }
 
+@JsonSubTypes (
+    JsonSubTypes.Type(ClassTypeSignature::class),
+    JsonSubTypes.Type(ArrayTypeSignature::class),
+    JsonSubTypes.Type(PrimitiveTypeSignature::class)
+)
+@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
 abstract class TypeSignature : Signature()
 
+@JsonSubTypes (
+    JsonSubTypes.Type(ClassTypeSignature::class),
+    JsonSubTypes.Type(ArrayTypeSignature::class)
+)
+@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
 abstract class ReferenceTypeSignature : TypeSignature()
 
+@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
 data class ClassTypeSignature(val className: String) : ReferenceTypeSignature() {
     companion object {
         val OBJECT = ClassTypeSignature("java/lang/Object")
@@ -67,12 +91,14 @@ data class ClassTypeSignature(val className: String) : ReferenceTypeSignature() 
     }
 }
 
+@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
 data class ArrayTypeSignature(val componentType: TypeSignature) : ReferenceTypeSignature() {
     override fun toString(): String {
         return "[$componentType"
     }
 }
 
+@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
 data class PrimitiveTypeSignature internal constructor(
     val code: Char
 ) : TypeSignature() {

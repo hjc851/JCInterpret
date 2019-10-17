@@ -1,6 +1,6 @@
 package jcinterpret.core.ctx.frame.synthetic
 
-import jcinterpret.core.ExecutionLogging
+import jcinterpret.core.ExecutionConfig
 import jcinterpret.core.control.ClassAreaFault
 import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.ctx.frame.ExecutionFrame
@@ -20,7 +20,7 @@ class SyntheticExecutionFrame (
             ReturnVoid.execute(ctx, this)
 
         val instruction = instructions.pop()
-        if (ExecutionLogging.isEnabled) println("\t$instruction")
+        if (ExecutionConfig.loggingEnabled) println("\t$instruction")
 
         try {
             instruction.execute(ctx, this)

@@ -1,6 +1,6 @@
 package jcinterpret.core.ctx
 
-import jcinterpret.core.ExecutionLogging
+import jcinterpret.core.ExecutionConfig
 import jcinterpret.core.JavaConcolicInterpreter
 import jcinterpret.core.control.*
 import jcinterpret.core.ctx.frame.ExecutionFrame
@@ -41,7 +41,7 @@ class ExecutionContext (
             val currentFrame = this.currentFrame
 
             if (lastFrame != currentFrame) {
-                if (ExecutionLogging.isEnabled) println("Frame: $currentFrame")
+                if (ExecutionConfig.loggingEnabled) println("Frame: $currentFrame")
                 lastFrame = currentFrame
             }
 
@@ -49,7 +49,7 @@ class ExecutionContext (
                 currentFrame.executeNextInstruction(this)
 
             } catch (e: ReturnException) {
-                if (ExecutionLogging.isEnabled) println("Returning from $currentFrame")
+                if (ExecutionConfig.loggingEnabled) println("Returning from $currentFrame")
                 val ret = e.value
                 frames.pop()
                 if (ret != null && frames.isNotEmpty())
@@ -98,15 +98,15 @@ class ExecutionContext (
                 break@execution
 
             } catch (e: ClassAreaFault) {
-                if (ExecutionLogging.isEnabled) println("Class area fault ${e.sigs}")
+                if (ExecutionConfig.loggingEnabled) println("Class area fault ${e.sigs}")
 
                 val frame = classArea.buildClassLoaderFrame(e.sigs)
                 frames.push(frame)
             }
         }
 
-        if (ExecutionLogging.isEnabled)println("TERMINATE")
-        return ExecutionTrace(records, descriptorLibrary, sourceLibrary, heapArea, classArea)
+        if (ExecutionConfig.loggingEnabled) println("TERMINATE")
+        return ExecutionTrace(records, heapArea)
     }
 
     //
@@ -117,7 +117,7 @@ class ExecutionContext (
         val newContext = ExecutionContextCloner.clone(this)
         interpreter.addContext(newContext)
         handle(newContext)
-        if (ExecutionLogging.isEnabled) println("FORK")
+        if (ExecutionConfig.loggingEnabled) println("FORK")
     }
 
     //
@@ -134,7 +134,7 @@ class ExecutionContext (
         return false
     }
 
-    fun countMethodOccuranceInCallStack(method: QualifiedMethodSignature): Int {
+    fun countMethodOccurenceInCallStack(method: QualifiedMethodSignature): Int {
         var counter = 0
 
         for (frame in frames)
