@@ -35,30 +35,65 @@ import javax.xml.bind.annotation.XmlType
 )
 @JsonTypeInfo(use= JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")
 abstract class TracerRecord: Serializable {
-    data class EntryMethod(val sig: QualifiedMethodSignature): TracerRecord()
-    data class EntryScope(val ref: StackReference): TracerRecord()
-    data class EntryParameter(val ref: StackValue): TracerRecord()
 
-    data class StaticLibraryMethodCall(val method: QualifiedMethodSignature, val params: Array<StackValue>, val result: StackValue?) : TracerRecord()
-    data class InstanceLibraryMethodCall(val method: QualifiedMethodSignature, val scope: ReferenceValue, val params: Array<StackValue>, val result: StackValue?) : TracerRecord()
+    //  Visitor method
 
-    data class StaticFieldPut(val staticType: ClassTypeSignature, val field: String, val type: TypeSignature, val oldValue: StackValue, val newValue: StackValue): TracerRecord()
-    data class ObjectFieldPut(val ref: ReferenceValue, val field: String, val type: TypeSignature, val oldValue: StackValue, val newValue: StackValue) : TracerRecord()
-    data class ArrayMemberPut(val ref: ReferenceValue, val index: StackValue, val oldValue: StackValue, val newValue: StackValue) : TracerRecord()
+    abstract fun <T> accept(visitor: Visitor<T>, arg: T)
 
-    data class DefaultInstanceFieldValue(val ref: ReferenceValue, val field: String, val value: StackValue): TracerRecord()
-    data class DefaultStaticFieldValue(val type: ClassTypeSignature, val field: String, val value: StackValue): TracerRecord()
-    data class SynthesisedReturnValue(val method: QualifiedMethodSignature, val result: StackValue): TracerRecord()
+    //
+    //  Records
+    //
 
-    data class StackTransformation(val lhs: StackValue, val rhs: StackValue, val result: StackValue, val operator: BinaryOperator) : TracerRecord()
-    data class NotValueTransformation(val input: StackValue, val output: StackValue) : TracerRecord()
-    data class StackCast(val lhs: StackValue, val rhs: StackValue): TracerRecord()
+    data class EntryMethod(val sig: QualifiedMethodSignature): TracerRecord() { override fun <T> accept(visitor: Visitor<T>, arg: T) { visitor.visit(this, arg) } }
+    data class EntryScope(val ref: StackReference): TracerRecord() { override fun <T> accept(visitor: Visitor<T>, arg: T) { visitor.visit(this, arg) } }
+    data class EntryParameter(val ref: StackValue): TracerRecord() { override fun <T> accept(visitor: Visitor<T>, arg: T) { visitor.visit(this, arg) } }
 
-    data class StringConcat(val lhs: StringValue, val rhs: StringValue, val result: StringValue): TracerRecord()
-    data class Stringification(val value: StackValue, val result: StringValue): TracerRecord()
+    data class StaticLibraryMethodCall(val method: QualifiedMethodSignature, val params: Array<StackValue>, val result: StackValue?) : TracerRecord() { override fun <T> accept(visitor: Visitor<T>, arg: T) { visitor.visit(this, arg) } }
+    data class InstanceLibraryMethodCall(val method: QualifiedMethodSignature, val scope: ReferenceValue, val params: Array<StackValue>, val result: StackValue?) : TracerRecord() { override fun <T> accept(visitor: Visitor<T>, arg: T) { visitor.visit(this, arg) } }
 
-    data class Assertion(val condition: StackValue, val truth: Boolean): TracerRecord()
+    data class StaticFieldPut(val staticType: ClassTypeSignature, val field: String, val type: TypeSignature, val oldValue: StackValue, val newValue: StackValue): TracerRecord() { override fun <T> accept(visitor: Visitor<T>, arg: T) { visitor.visit(this, arg) } }
+    data class ObjectFieldPut(val ref: ReferenceValue, val field: String, val type: TypeSignature, val oldValue: StackValue, val newValue: StackValue) : TracerRecord() { override fun <T> accept(visitor: Visitor<T>, arg: T) { visitor.visit(this, arg) } }
+    data class ArrayMemberPut(val ref: ReferenceValue, val index: StackValue, val oldValue: StackValue, val newValue: StackValue) : TracerRecord() { override fun <T> accept(visitor: Visitor<T>, arg: T) { visitor.visit(this, arg) } }
 
-    data class Halt(val msg: String): TracerRecord()
-    data class UncaughtException(val type: ClassTypeSignature): TracerRecord()
+    data class DefaultInstanceFieldValue(val ref: ReferenceValue, val field: String, val value: StackValue): TracerRecord() { override fun <T> accept(visitor: Visitor<T>, arg: T) { visitor.visit(this, arg) } }
+    data class DefaultStaticFieldValue(val type: ClassTypeSignature, val field: String, val value: StackValue): TracerRecord() { override fun <T> accept(visitor: Visitor<T>, arg: T) { visitor.visit(this, arg) } }
+    data class SynthesisedReturnValue(val method: QualifiedMethodSignature, val result: StackValue): TracerRecord() { override fun <T> accept(visitor: Visitor<T>, arg: T) { visitor.visit(this, arg) } }
+
+    data class StackTransformation(val lhs: StackValue, val rhs: StackValue, val result: StackValue, val operator: BinaryOperator) : TracerRecord() { override fun <T> accept(visitor: Visitor<T>, arg: T) { visitor.visit(this, arg) } }
+    data class NotValueTransformation(val input: StackValue, val output: StackValue) : TracerRecord() { override fun <T> accept(visitor: Visitor<T>, arg: T) { visitor.visit(this, arg) } }
+    data class StackCast(val lhs: StackValue, val rhs: StackValue): TracerRecord() { override fun <T> accept(visitor: Visitor<T>, arg: T) { visitor.visit(this, arg) } }
+
+    data class StringConcat(val lhs: StringValue, val rhs: StringValue, val result: StringValue): TracerRecord() { override fun <T> accept(visitor: Visitor<T>, arg: T) { visitor.visit(this, arg) } }
+    data class Stringification(val value: StackValue, val result: StringValue): TracerRecord() { override fun <T> accept(visitor: Visitor<T>, arg: T) { visitor.visit(this, arg) } }
+
+    data class Assertion(val condition: StackValue, val truth: Boolean): TracerRecord() { override fun <T> accept(visitor: Visitor<T>, arg: T) { visitor.visit(this, arg) } }
+
+    data class Halt(val msg: String): TracerRecord() { override fun <T> accept(visitor: Visitor<T>, arg: T) { visitor.visit(this, arg) } }
+    data class UncaughtException(val type: ClassTypeSignature): TracerRecord() { override fun <T> accept(visitor: Visitor<T>, arg: T) { visitor.visit(this, arg) } }
+
+    //
+    //  Visitor
+    //
+
+    abstract class Visitor<T> {
+        abstract fun visit(node: EntryMethod, arg: T)
+        abstract fun visit(node: EntryScope, arg: T)
+        abstract fun visit(node: EntryParameter, arg: T)
+        abstract fun visit(node: StaticLibraryMethodCall, arg: T)
+        abstract fun visit(node: InstanceLibraryMethodCall, arg: T)
+        abstract fun visit(node: StaticFieldPut, arg: T)
+        abstract fun visit(node: ObjectFieldPut, arg: T)
+        abstract fun visit(node: ArrayMemberPut, arg: T)
+        abstract fun visit(node: DefaultInstanceFieldValue, arg: T)
+        abstract fun visit(node: DefaultStaticFieldValue, arg: T)
+        abstract fun visit(node: SynthesisedReturnValue, arg: T)
+        abstract fun visit(node: StackTransformation, arg: T)
+        abstract fun visit(node: NotValueTransformation, arg: T)
+        abstract fun visit(node: StackCast, arg: T)
+        abstract fun visit(node: StringConcat, arg: T)
+        abstract fun visit(node: Stringification, arg: T)
+        abstract fun visit(node: Assertion, arg: T)
+        abstract fun visit(node: Halt, arg: T)
+        abstract fun visit(node: UncaughtException, arg: T)
+    }
 }
