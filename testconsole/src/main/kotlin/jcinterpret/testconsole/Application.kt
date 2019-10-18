@@ -4,15 +4,17 @@ import jcinterpret.document.ConfigDocument
 import jcinterpret.document.DocumentUtils
 import jcinterpret.core.ExecutionConfig
 import jcinterpret.core.JavaConcolicInterpreterFactory
+import jcinterpret.core.control.UnsupportedLanguageFeature
 import jcinterpret.core.descriptors.DescriptorLibraryFactory
 import jcinterpret.core.descriptors.qualifiedSignature
 import jcinterpret.core.source.SourceLibraryFactory
-import jcinterpret.core.trace.EntryPointExecutionTraces
 import jcinterpret.entry.EntryPointFinder
+import jcinterpret.graph.LiteralChainGraphPruner
+import jcinterpret.graph.execution.ExecutionGraphBuilder
 import jcinterpret.parser.Parser
+import org.graphstream.ui.view.Viewer
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.time.Instant
 import kotlin.streams.toList
 
 fun main(args: Array<String>) {
@@ -39,7 +41,7 @@ fun main(args: Array<String>) {
         Files.createDirectories(output)
 
     if (!Files.exists(projectsRoot))
-        throw IllegalArgumentException("Unown projects root ${projectsRoot}")
+        throw IllegalArgumentException("Unknown projects root $projectsRoot")
 
     val globalLibraries = document.globalLibraries.map { root.resolve(it) }
     val projectLibraries = document.projectLibraries?.map { it.key to it.value.map { root.resolve(it) } }?.toMap()
@@ -85,36 +87,62 @@ fun main(args: Array<String>) {
     println()
 
     println("Generating Execution Traces")
-    val executionTraces = projects.map { project ->
-        println("Executing ${project.id}")
-        val result = project to project.entries.map { entry ->
-            val sig = entry.binding.qualifiedSignature()
-            println("\tInvoking ${sig}")
-            val interpreter = JavaConcolicInterpreterFactory.build(sig, project.descriptorLibrary, project.sourceLibrary)
-            val traces = interpreter.execute()
-            return@map entry to traces
-        }.toList().toMap()
-        return@map result
+    val executionTraces = projects.mapNotNull { project ->
+        try {
+            println("Executing ${project.id}")
+            val result = project to project.entries.map { entry ->
+                val sig = entry.binding.qualifiedSignature()
+                println("\tInvoking $sig")
+                val interpreter = JavaConcolicInterpreterFactory.build(sig, project.descriptorLibrary, project.sourceLibrary)
+                val traces = interpreter.execute()
+                return@map entry to traces
+            }.toList().toMap()
+            return@mapNotNull result
+        } catch (e: UnsupportedLanguageFeature) {
+            println("Removing ${project.id} due to: ${e.msg}")
+            return@mapNotNull null
+        }
     }.toList().toMap()
 
-    println("Writing results")
-    val dir = output.resolve(Instant.now().toString())
-    Files.createDirectory(dir)
+//    println("Writing results")
+//    val dir = output.resolve(Instant.now().toString())
+//    Files.createDirectory(dir)
+//
+//    for ((project, entryTraces) in executionTraces) {
+//        val projDir = dir.resolve(project.id)
+//        Files.createDirectory(projDir)
+//
+//        for ((entry, traces) in entryTraces) {
+//            val msig = entry.binding.qualifiedSignature()
+//            val fout = projDir.resolve(msig.toString())
+//
+//            val document = EntryPointExecutionTraces (
+//                msig,
+//                traces.toTypedArray()
+//            )
+//
+//            DocumentUtils.writeObject(fout, document)
+//        }
+//    }
 
+    println("Displaying graphs")
     for ((project, entryTraces) in executionTraces) {
-        val projDir = dir.resolve(project.id)
-        Files.createDirectory(projDir)
-
         for ((entry, traces) in entryTraces) {
-            val msig = entry.binding.qualifiedSignature()
-            val fout = projDir.resolve(msig.toString())
+            traces.forEachIndexed { index, trace ->
+                val egraph = ExecutionGraphBuilder.build("${project.id} ${entry.binding.qualifiedSignature()} #$index", trace)
+                val prunegraph = LiteralChainGraphPruner.prune(egraph.graph)
 
-            val document = EntryPointExecutionTraces (
-                msig,
-                traces.toTypedArray()
-            )
+                egraph.graph.display().apply {
+                    this.closeFramePolicy = Viewer.CloseFramePolicy.CLOSE_VIEWER
+                }
 
-            DocumentUtils.writeObject(fout, document)
+                prunegraph.display().apply {
+                    this.closeFramePolicy = Viewer.CloseFramePolicy.CLOSE_VIEWER
+                }
+
+                print("Press any key to continue -> ")
+                readLine()
+            }
         }
     }
 

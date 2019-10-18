@@ -7,7 +7,7 @@ import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.ctx.frame.Instruction
 import jcinterpret.core.memory.heap.ObjectType
 import jcinterpret.core.memory.stack.StackReference
-import jcinterpret.core.trace.TracerRecord
+import jcinterpret.core.trace.TraceRecord
 import jcinterpret.signature.*
 
 abstract class SyntheticInstruction: Instruction() {
@@ -131,7 +131,7 @@ class AllocateClassType(val sig: ClassTypeSignature) : SyntheticInstruction() {
 //  Tracing
 //
 
-class Tracehook(val handle: (ExecutionContext) -> TracerRecord): SyntheticInstruction() {
+class Tracehook(val handle: (ExecutionContext) -> TraceRecord): SyntheticInstruction() {
     override fun execute(ctx: ExecutionContext, frame: SyntheticExecutionFrame) {
         val record = handle(ctx)
         ctx.records.add(record)

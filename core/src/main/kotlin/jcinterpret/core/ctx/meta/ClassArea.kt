@@ -7,7 +7,7 @@ import jcinterpret.core.ctx.frame.synthetic.SyntheticInstruction
 import jcinterpret.core.ctx.frame.synthetic.ValidateClassDependencies
 import jcinterpret.core.descriptors.ClassTypeDescriptor
 import jcinterpret.core.memory.heap.Field
-import jcinterpret.core.trace.TracerRecord
+import jcinterpret.core.trace.TraceRecord
 import jcinterpret.signature.ArrayTypeSignature
 import jcinterpret.signature.ClassTypeSignature
 import jcinterpret.signature.TypeSignature
@@ -47,7 +47,7 @@ class ClassArea (
             .filter { it.isStatic }
             .map {
                 val field = Field(it.name, it.type, ctx.heapArea.allocateSymbolic(ctx, it.type))
-                ctx.records.add(TracerRecord.DefaultStaticFieldValue(cls.signature, field.name, field.value))
+                ctx.records.add(TraceRecord.DefaultStaticFieldValue(cls.signature, field.name, field.value))
                 return@map it.name to field
             }.toMap().toMutableMap()
 

@@ -3,9 +3,11 @@ package jcinterpret.core.memory.heap
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import jcinterpret.core.ctx.ExecutionContext
+import jcinterpret.core.memory.stack.ConcreteValue
+import jcinterpret.core.memory.stack.StackInt
 import jcinterpret.core.memory.stack.StackValue
 import jcinterpret.core.memory.stack.SymbolicValue
-import jcinterpret.core.trace.TracerRecord
+import jcinterpret.core.trace.TraceRecord
 import jcinterpret.signature.ArrayTypeSignature
 import jcinterpret.signature.ClassTypeSignature
 import jcinterpret.signature.ReferenceTypeSignature
@@ -24,15 +26,20 @@ abstract class ObjectType (
     val fields: MutableMap<String, Field>
 ): HeapValue() {
 
-    protected abstract fun getField(name: String, type: TypeSignature, ctx: ExecutionContext): Field
+    protected enum class Intent {
+        GET,
+        SET
+    }
+
+    protected abstract fun getField(name: String, type: TypeSignature, intent: Intent, ctx: ExecutionContext): Field
 
     fun store(name: String, type: TypeSignature, value: StackValue, ctx: ExecutionContext) {
-        val field = getField(name, type, ctx)
+        val field = getField(name, type, Intent.SET, ctx)
         field.value = value
     }
 
     fun load(name: String, type: TypeSignature, ctx: ExecutionContext): StackValue {
-        val field = getField(name, type, ctx)
+        val field = getField(name, type, Intent.GET, ctx)
         return field.value
     }
 }
@@ -46,10 +53,17 @@ class ConcreteObject (
     override val lookupType: ClassTypeSignature
         get() = type as ClassTypeSignature
 
-    override fun getField(name: String, type: TypeSignature, ctx: ExecutionContext): Field {
+    override fun getField(name: String, type: TypeSignature, intent: Intent, ctx: ExecutionContext): Field {
         return fields.getOrPut(name) {
             val desc = ctx.descriptorLibrary.getDescriptor(type)
-            Field(name, type, desc.defaultValue)
+            val field = if (intent == Intent.GET) {
+                val default = ctx.heapArea.allocateSymbolic(ctx, type)
+                ctx.records.add(TraceRecord.DefaultInstanceFieldValue(ref(), name, default))
+                Field(name, type, default)
+            } else {
+                Field(name, type, desc.defaultValue)
+            }
+            return@getOrPut field
         }
     }
 }
@@ -63,12 +77,19 @@ class SymbolicObject (
     override val lookupType: ClassTypeSignature
         get() = type as ClassTypeSignature
 
-    override fun getField(name: String, type: TypeSignature, ctx: ExecutionContext): Field {
+    override fun getField(name: String, type: TypeSignature, intent: Intent, ctx: ExecutionContext): Field {
         return fields.getOrPut(name) {
-            val desc = ctx.descriptorLibrary.getDescriptor(type)
-            val value = ctx.heapArea.allocateSymbolic(ctx, type)
-            ctx.records.add(TracerRecord.DefaultInstanceFieldValue(this.ref(), name, value))
-            Field(name, type, value)
+            return fields.getOrPut(name) {
+                val desc = ctx.descriptorLibrary.getDescriptor(type)
+                val field = if (intent == Intent.GET) {
+                    val default = ctx.heapArea.allocateSymbolic(ctx, type)
+                    ctx.records.add(TraceRecord.DefaultInstanceFieldValue(ref(), name, default))
+                    Field(name, type, default)
+                } else {
+                    Field(name, type, desc.defaultValue)
+                }
+                return@getOrPut field
+            }
         }
     }
 }
@@ -98,11 +119,15 @@ class SymbolicArray (
         return storage[index]!!
     }
 
-    override fun getField(name: String, type: TypeSignature, ctx: ExecutionContext): Field {
-        throw IllegalStateException("Arraysdo not have fields")
+    override fun getField(name: String, type: TypeSignature, intent: Intent, ctx: ExecutionContext): Field {
+        throw IllegalStateException("Arrays do not have fields")
     }
 
     fun length(): StackValue {
-        return size
+        val onlyContainsConcreteIndicies = storage.keys
+            .firstOrNull { it !is ConcreteValue<*> } == null
+
+        return if (onlyContainsConcreteIndicies) StackInt(storage.size)
+        else size
     }
 }

@@ -1,5 +1,6 @@
 package jcinterpret.core.ctx.frame.interpreted
 
+import jcinterpret.core.control.UnsupportedLanguageFeature
 import jcinterpret.core.descriptors.qualifiedSignature
 import jcinterpret.core.descriptors.signature
 import jcinterpret.core.memory.stack.StackBoolean
@@ -285,10 +286,10 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
         val binding = node.resolveConstructorBinding()
 
         if (node.anonymousClassDeclaration != null)
-            throw IllegalArgumentException("Anonymous classes are not implemented")
+            throw UnsupportedLanguageFeature("Anonymous classes are not implemented")
 
         if (node.expression != null)
-            throw IllegalArgumentException("Scoped constructor calls not implemented")
+            throw UnsupportedLanguageFeature("Scoped constructor calls not implemented")
 
         push(invoke_special(node.resolveConstructorBinding().qualifiedSignature()))
         if (binding.isVarargs) {
@@ -440,23 +441,50 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
                 .reversed()
                 .forEach { add(it as Expression) }
         }
-        push(push(load("this")))
+        push(load("this"))
 
         return false
     }
 
     override fun visit(node: SuperConstructorInvocation): Boolean {
-        TODO()
+        val binding = node.resolveConstructorBinding()
+
+        push(invoke_special(node.resolveConstructorBinding().qualifiedSignature()))
+        if (binding.isVarargs) {
+            val regSize = binding.parameterTypes.size - 1
+
+            for (i in node.arguments().size-1 downTo regSize) {
+                push(arr_store)
+                add(node.arguments()[i] as Expression)
+                push(push(StackInt(i)))
+                push(dup)
+            }
+
+            push(arr_allocate(binding.parameterTypes.last().componentType.signature()))
+
+            node.arguments()
+                .take(regSize)
+                .reversed()
+                .forEach { add(it as Expression) }
+
+        } else {
+            node.arguments()
+                .reversed()
+                .forEach { add(it as Expression) }
+        }
+        push(load("this"))
+
+        return false
     }
 
     override fun visit(node: ArrayCreation): Boolean {
 
         if (node.initializer != null) {
             for (i in node.initializer.expressions().size-1 downTo 0) {
-                val node = node.initializer.expressions()[i] as Expression
+                val arg = node.initializer.expressions()[i] as Expression
 
                 push(arr_store)
-                push(decode_expr(node))
+                push(decode_expr(arg))
                 push(push(StackInt(i)))
                 push(dup)
             }
@@ -469,10 +497,10 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
     override fun visit(node: ArrayInitializer): Boolean {
 
         for (i in node.expressions().size-1 downTo 0) {
-            val node = node.expressions()[i] as Expression
+            val arg = node.expressions()[i] as Expression
 
             push(arr_store)
-            push(decode_expr(node))
+            push(decode_expr(arg))
             push(push(StackInt(i)))
             push(dup)
         }
@@ -869,22 +897,22 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
     //  Functional
 
     override fun visit(node: LambdaExpression): Boolean {
-        TODO()
+        throw UnsupportedLanguageFeature("Lambda expressions are not supported")
     }
 
     override fun visit(node: CreationReference): Boolean {
-        TODO()
+        throw UnsupportedLanguageFeature("Method references are not supported")
     }
 
     override fun visit(node: ExpressionMethodReference): Boolean {
-        TODO()
+        throw UnsupportedLanguageFeature("Method references are not supported")
     }
 
     override fun visit(node: SuperMethodReference): Boolean {
-        TODO()
+        throw UnsupportedLanguageFeature("Method references are not supported")
     }
 
     override fun visit(node: TypeMethodReference): Boolean {
-        TODO()
+        throw UnsupportedLanguageFeature("Method references are not supported")
     }
 }

@@ -6,7 +6,7 @@ import jcinterpret.core.ctx.frame.interpreted.*
 import jcinterpret.core.descriptors.MethodDescriptor
 import jcinterpret.core.memory.stack.ReferenceValue
 import jcinterpret.core.memory.stack.StackValue
-import jcinterpret.core.trace.TracerRecord
+import jcinterpret.core.trace.TraceRecord
 import jcinterpret.signature.PrimitiveTypeSignature
 import jcinterpret.signature.QualifiedMethodSignature
 import org.eclipse.jdt.core.dom.MethodDeclaration
@@ -67,11 +67,11 @@ class InterpretedMethod(desc: MethodDescriptor, val decl: MethodDeclaration): Me
 
             if (result != null) {
                 ctx.currentFrame.push(result)
-                ctx.records.add(TracerRecord.SynthesisedReturnValue(desc.qualifiedSignature, result))
+                ctx.records.add(TraceRecord.SynthesisedReturnValue(desc.qualifiedSignature, result))
             }
 
-            if (desc.isStatic) ctx.records.add(TracerRecord.StaticLibraryMethodCall(desc.qualifiedSignature, params, result))
-            else ctx.records.add(TracerRecord.InstanceLibraryMethodCall(desc.qualifiedSignature, selfRef!!, params, result))
+            if (desc.isStatic) ctx.records.add(TraceRecord.StaticLibraryMethodCall(desc.qualifiedSignature, params, result))
+            else ctx.records.add(TraceRecord.InstanceLibraryMethodCall(desc.qualifiedSignature, selfRef!!, params, result))
         } else {
             val frame = InterpretedExecutionFrame(instructions, operands, locals, exceptionScopes, breakScopes, desc.qualifiedSignature)
             ctx.frames.push(frame)
@@ -97,10 +97,10 @@ class OpaqueMethod(desc: MethodDescriptor): Method(desc) {
 
         if (result != null) {
             ctx.currentFrame.push(result)
-            ctx.records.add(TracerRecord.SynthesisedReturnValue(desc.qualifiedSignature, result))
+            ctx.records.add(TraceRecord.SynthesisedReturnValue(desc.qualifiedSignature, result))
         }
 
-        if (desc.isStatic) ctx.records.add(TracerRecord.StaticLibraryMethodCall(desc.qualifiedSignature, params, result))
-        else ctx.records.add(TracerRecord.InstanceLibraryMethodCall(desc.qualifiedSignature, selfRef!!, params, result))
+        if (desc.isStatic) ctx.records.add(TraceRecord.StaticLibraryMethodCall(desc.qualifiedSignature, params, result))
+        else ctx.records.add(TraceRecord.InstanceLibraryMethodCall(desc.qualifiedSignature, selfRef!!, params, result))
     }
 }

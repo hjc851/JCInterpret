@@ -13,6 +13,8 @@ import java.io.Serializable
 @JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
 abstract class StackValue: Serializable {
     abstract val type: StackType
+
+    abstract fun label(): String
 }
 
 enum class StackType {

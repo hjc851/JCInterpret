@@ -23,6 +23,10 @@ import javax.xml.bind.annotation.XmlType
 abstract class ConcreteValue<T: Any>: StackValue() {
     abstract val value: T
     abstract fun number(): Number
+
+    override fun label(): String {
+        return "${number()} ${type.name}"
+    }
 }
 
 @JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")

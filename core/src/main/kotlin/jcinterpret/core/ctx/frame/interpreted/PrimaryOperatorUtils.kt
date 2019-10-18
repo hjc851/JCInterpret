@@ -2,14 +2,14 @@ package jcinterpret.core.ctx.frame.interpreted
 
 import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.memory.stack.*
-import jcinterpret.core.trace.TracerRecord
+import jcinterpret.core.trace.TraceRecord
 
 object PrimaryOperationUtils {
     fun add(lhs: StackValue, rhs: StackValue, ctx: ExecutionContext): StackValue {
         val value = if (lhs is ConcreteValue<*> && rhs is ConcreteValue<*>) addConcrete(lhs, rhs)
         else BinaryOperationValue(lhs, rhs, lhs.type, BinaryOperator.ADD)
 
-        ctx.records.add(TracerRecord.StackTransformation(lhs, rhs, value, BinaryOperator.ADD))
+        ctx.records.add(TraceRecord.StackTransformation(lhs, rhs, value, BinaryOperator.ADD))
         return value
     }
 
@@ -39,7 +39,7 @@ object PrimaryOperationUtils {
         val value = if (lhs is ConcreteValue<*> && rhs is ConcreteValue<*>) subConcrete(lhs, rhs)
         else BinaryOperationValue(lhs, rhs, lhs.type, BinaryOperator.SUB)
 
-        ctx.records.add(TracerRecord.StackTransformation(lhs, rhs, value, BinaryOperator.SUB))
+        ctx.records.add(TraceRecord.StackTransformation(lhs, rhs, value, BinaryOperator.SUB))
         return value
     }
 
@@ -69,7 +69,7 @@ object PrimaryOperationUtils {
         val value = if (lhs is ConcreteValue<*> && rhs is ConcreteValue<*>) mulConcrete(lhs, rhs)
         else BinaryOperationValue(lhs, rhs, lhs.type, BinaryOperator.MUL)
 
-        ctx.records.add(TracerRecord.StackTransformation(lhs, rhs, value, BinaryOperator.MUL))
+        ctx.records.add(TraceRecord.StackTransformation(lhs, rhs, value, BinaryOperator.MUL))
         return value
     }
 
@@ -95,7 +95,7 @@ object PrimaryOperationUtils {
         val value = if (lhs is ConcreteValue<*> && rhs is ConcreteValue<*>) divConcrete(lhs, rhs)
         else BinaryOperationValue(lhs, rhs, lhs.type, BinaryOperator.DIV)
 
-        ctx.records.add(TracerRecord.StackTransformation(lhs, rhs, value, BinaryOperator.DIV))
+        ctx.records.add(TraceRecord.StackTransformation(lhs, rhs, value, BinaryOperator.DIV))
         return value
     }
 
@@ -121,7 +121,7 @@ object PrimaryOperationUtils {
         val value = if (lhs is ConcreteValue<*> && rhs is ConcreteValue<*>) modConcrete(lhs, rhs)
         else BinaryOperationValue(lhs, rhs, lhs.type, BinaryOperator.MOD)
 
-        ctx.records.add(TracerRecord.StackTransformation(lhs, rhs, value, BinaryOperator.MOD))
+        ctx.records.add(TraceRecord.StackTransformation(lhs, rhs, value, BinaryOperator.MOD))
         return value
     }
 
@@ -159,7 +159,7 @@ object PrimaryOperationUtils {
         val value = if (lhs is ConcreteValue<*> && rhs is ConcreteValue<*>) StackBoolean(lhs.number().toDouble() > rhs.number().toDouble())
         else BinaryOperationValue(lhs, rhs, StackType.BOOLEAN, BinaryOperator.GREATER)
 
-        ctx.records.add(TracerRecord.StackTransformation(lhs, rhs, value, BinaryOperator.GREATER))
+        ctx.records.add(TraceRecord.StackTransformation(lhs, rhs, value, BinaryOperator.GREATER))
         return value
     }
 
@@ -167,7 +167,7 @@ object PrimaryOperationUtils {
         val value = if (lhs is ConcreteValue<*> && rhs is ConcreteValue<*>) StackBoolean(lhs.number().toDouble() < rhs.number().toDouble())
         else BinaryOperationValue(lhs, rhs, StackType.BOOLEAN, BinaryOperator.LESS)
 
-        ctx.records.add(TracerRecord.StackTransformation(lhs, rhs, value, BinaryOperator.LESS))
+        ctx.records.add(TraceRecord.StackTransformation(lhs, rhs, value, BinaryOperator.LESS))
         return value
     }
 
@@ -175,7 +175,7 @@ object PrimaryOperationUtils {
         val value = if (lhs is ConcreteValue<*> && rhs is ConcreteValue<*>) StackBoolean(lhs.number().toDouble() <= rhs.number().toDouble())
         else BinaryOperationValue(lhs, rhs, StackType.BOOLEAN, BinaryOperator.LESSEQUALS)
 
-        ctx.records.add(TracerRecord.StackTransformation(lhs, rhs, value, BinaryOperator.LESSEQUALS))
+        ctx.records.add(TraceRecord.StackTransformation(lhs, rhs, value, BinaryOperator.LESSEQUALS))
         return value
     }
 
@@ -183,7 +183,7 @@ object PrimaryOperationUtils {
         val value = if (lhs is ConcreteValue<*> && rhs is ConcreteValue<*>) StackBoolean(lhs.number().toDouble() >= rhs.number().toDouble())
         else BinaryOperationValue(lhs, rhs, StackType.BOOLEAN, BinaryOperator.GREATEREQUALS)
 
-        ctx.records.add(TracerRecord.StackTransformation(lhs, rhs, value, BinaryOperator.GREATEREQUALS))
+        ctx.records.add(TraceRecord.StackTransformation(lhs, rhs, value, BinaryOperator.GREATEREQUALS))
         return value
     }
 
@@ -191,7 +191,7 @@ object PrimaryOperationUtils {
         val value = if (lhs is ConcreteValue<*> && rhs is ConcreteValue<*>) StackBoolean(lhs.number().toDouble() == rhs.number().toDouble())
         else BinaryOperationValue(lhs, rhs, StackType.BOOLEAN, BinaryOperator.EQUALS)
 
-        ctx.records.add(TracerRecord.StackTransformation(lhs, rhs, value, BinaryOperator.EQUALS))
+        ctx.records.add(TraceRecord.StackTransformation(lhs, rhs, value, BinaryOperator.EQUALS))
         return value
     }
 
@@ -199,7 +199,7 @@ object PrimaryOperationUtils {
         val value = if (lhs is ConcreteValue<*> && rhs is ConcreteValue<*>) StackBoolean(lhs.number().toDouble() != rhs.number().toDouble())
         else BinaryOperationValue(lhs, rhs, StackType.BOOLEAN, BinaryOperator.NOTEQUALS)
 
-        ctx.records.add(TracerRecord.StackTransformation(lhs, rhs, value, BinaryOperator.NOTEQUALS))
+        ctx.records.add(TraceRecord.StackTransformation(lhs, rhs, value, BinaryOperator.NOTEQUALS))
         return value
     }
 
@@ -207,7 +207,7 @@ object PrimaryOperationUtils {
         val value = if (lhs is StackBoolean) StackBoolean(!lhs.value)
         else NotValue(lhs)
 
-        ctx.records.add(TracerRecord.NotValueTransformation(lhs, value))
+        ctx.records.add(TraceRecord.NotValueTransformation(lhs, value))
         return value
     }
 
@@ -215,7 +215,7 @@ object PrimaryOperationUtils {
         val value = if (lhs is StackBoolean && rhs is StackBoolean) StackBoolean(lhs.value || rhs.value)
         else BinaryOperationValue(lhs, rhs, StackType.BOOLEAN, BinaryOperator.AND)
 
-        ctx.records.add(TracerRecord.StackTransformation(lhs, rhs, value, BinaryOperator.AND))
+        ctx.records.add(TraceRecord.StackTransformation(lhs, rhs, value, BinaryOperator.AND))
         return value
     }
 
@@ -223,7 +223,7 @@ object PrimaryOperationUtils {
         val value = if (lhs is StackBoolean && rhs is StackBoolean) StackBoolean(lhs.value && rhs.value)
         else BinaryOperationValue(lhs, rhs, StackType.BOOLEAN, BinaryOperator.AND)
 
-        ctx.records.add(TracerRecord.StackTransformation(lhs, rhs, value, BinaryOperator.AND))
+        ctx.records.add(TraceRecord.StackTransformation(lhs, rhs, value, BinaryOperator.AND))
         return value
     }
 
@@ -231,7 +231,7 @@ object PrimaryOperationUtils {
         val value = if (lhs is StackBoolean && rhs is StackBoolean) StackBoolean(lhs.value.xor(rhs.value))
         else BinaryOperationValue(lhs, rhs, StackType.BOOLEAN, BinaryOperator.AND)
 
-        ctx.records.add(TracerRecord.StackTransformation(lhs, rhs, value, BinaryOperator.AND))
+        ctx.records.add(TraceRecord.StackTransformation(lhs, rhs, value, BinaryOperator.AND))
         return value
     }
 }

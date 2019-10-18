@@ -12,14 +12,14 @@ import jcinterpret.core.ctx.meta.NativeArea
 import jcinterpret.core.descriptors.DescriptorLibrary
 import jcinterpret.core.source.SourceLibrary
 import jcinterpret.core.trace.ExecutionTrace
-import jcinterpret.core.trace.TracerRecord
+import jcinterpret.core.trace.TraceRecord
 import jcinterpret.signature.ClassTypeSignature
 import jcinterpret.signature.QualifiedMethodSignature
 import java.util.*
 
 class ExecutionContext (
     val interpreter: JavaConcolicInterpreter,
-    val records: MutableList<TracerRecord>,
+    val records: MutableList<TraceRecord>,
     val descriptorLibrary: DescriptorLibrary,
     val sourceLibrary: SourceLibrary,
     val heapArea: HeapArea,
@@ -89,12 +89,12 @@ class ExecutionContext (
                 }
 
                 if (frames.isEmpty()) {
-                    records.add(TracerRecord.UncaughtException(eobj.type as ClassTypeSignature))
+                    records.add(TraceRecord.UncaughtException(eobj.type as ClassTypeSignature))
                     break@execution
                 }
 
             } catch (e: HaltException) {
-                records.add(TracerRecord.Halt(e.msg))
+                records.add(TraceRecord.Halt(e.msg))
                 break@execution
 
             } catch (e: ClassAreaFault) {

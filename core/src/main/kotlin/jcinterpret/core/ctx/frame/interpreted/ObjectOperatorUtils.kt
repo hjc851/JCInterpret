@@ -3,7 +3,7 @@ package jcinterpret.core.ctx.frame.interpreted
 import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.memory.heap.*
 import jcinterpret.core.memory.stack.*
-import jcinterpret.core.trace.TracerRecord
+import jcinterpret.core.trace.TraceRecord
 
 object ObjectOperatorUtils {
     fun add(lhs: StackReference, rhs: StackReference, ctx: ExecutionContext): StackValue {
@@ -17,11 +17,11 @@ object ObjectOperatorUtils {
                 robj.value
             } else if (robj is BoxedStackValueObject) {
                 StackValueStringValue(robj.value).apply {
-                    ctx.records.add(TracerRecord.Stringification(robj.value, this))
+                    ctx.records.add(TraceRecord.Stringification(robj.value, this))
                 }
             } else {
                 StackValueStringValue(robj.ref()).apply {
-                    ctx.records.add(TracerRecord.Stringification(robj.ref(), this))
+                    ctx.records.add(TraceRecord.Stringification(robj.ref(), this))
                 }
             }
 
@@ -35,8 +35,8 @@ object ObjectOperatorUtils {
             val str = ctx.heapArea.allocateSymbolicString(ctx, value)
             val ref = str.ref()
 
-            ctx.records.add(TracerRecord.StringConcat(lstr, rstr, value))
-            ctx.records.add(TracerRecord.StackTransformation(lhs, rhs, ref, BinaryOperator.CONCAT))
+            ctx.records.add(TraceRecord.StringConcat(lstr, rstr, value))
+//            ctx.records.add(TraceRecord.StackTransformation(lhs, rhs, ref, BinaryOperator.CONCAT))
 
             return ref
 
@@ -56,7 +56,7 @@ object ObjectOperatorUtils {
 
             val lstr = lobj.value
             val rstr = StackValueStringValue(rhs)
-            ctx.records.add(TracerRecord.Stringification(rhs, rstr))
+            ctx.records.add(TraceRecord.Stringification(rhs, rstr))
 
             val value = if (lstr is ConcreteStringValue && rhs is ConcreteValue<*>)
                 ConcreteStringValue(lstr.value + rhs.value)
@@ -66,8 +66,8 @@ object ObjectOperatorUtils {
             val str = ctx.heapArea.allocateSymbolicString(ctx, value)
             val ref = str.ref()
 
-            ctx.records.add(TracerRecord.StringConcat(lstr, rstr, value))
-            ctx.records.add(TracerRecord.StackTransformation(lhs, rhs, ref, BinaryOperator.CONCAT))
+            ctx.records.add(TraceRecord.StringConcat(lstr, rstr, value))
+//            ctx.records.add(TraceRecord.StackTransformation(lhs, rhs, ref, BinaryOperator.CONCAT))
 
             return ref
 
@@ -85,7 +85,7 @@ object ObjectOperatorUtils {
         if (robj is BoxedStringObject) {
             val lstr = if (lhs is ConcreteValue<*>) ConcreteStringValue(lhs.value.toString())
             else StackValueStringValue(lhs)
-            ctx.records.add(TracerRecord.Stringification(lhs, lstr))
+            ctx.records.add(TraceRecord.Stringification(lhs, lstr))
 
             val rstr = robj.value
 
@@ -95,8 +95,8 @@ object ObjectOperatorUtils {
             val str = ctx.heapArea.allocateSymbolicString(ctx, value)
             val ref = str.ref()
 
-            ctx.records.add(TracerRecord.StringConcat(lstr, rstr, value))
-            ctx.records.add(TracerRecord.StackTransformation(lhs, rhs, ref, BinaryOperator.CONCAT))
+            ctx.records.add(TraceRecord.StringConcat(lstr, rstr, value))
+//            ctx.records.add(TraceRecord.StackTransformation(lhs, rhs, ref, BinaryOperator.CONCAT))
 
             return ref
         }
@@ -163,7 +163,7 @@ object ObjectOperatorUtils {
             else
                 BinaryOperationValue(lvalue, rhs, StackType.BOOLEAN, BinaryOperator.LESS)
 
-            ctx.records.add(TracerRecord.StackTransformation(lvalue, rhs, result, BinaryOperator.LESS))
+            ctx.records.add(TraceRecord.StackTransformation(lvalue, rhs, result, BinaryOperator.LESS))
             return result
         }
 
@@ -249,7 +249,7 @@ object ObjectOperatorUtils {
             else
                 BinaryOperationValue(lvalue, rhs, StackType.BOOLEAN, BinaryOperator.GREATEREQUALS)
 
-            ctx.records.add(TracerRecord.StackTransformation(lvalue, rhs, result, BinaryOperator.GREATEREQUALS))
+            ctx.records.add(TraceRecord.StackTransformation(lvalue, rhs, result, BinaryOperator.GREATEREQUALS))
             return result
         }
 

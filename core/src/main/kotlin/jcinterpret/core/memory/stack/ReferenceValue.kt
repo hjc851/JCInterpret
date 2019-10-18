@@ -22,10 +22,18 @@ abstract class ReferenceValue: StackValue() {
 }
 
 @JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
-data class StackReference(override val id: Int): ReferenceValue()
+data class StackReference(override val id: Int): ReferenceValue() {
+    override fun label(): String {
+        return "@$id"
+    }
+}
 
 @JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
 object StackNil: ReferenceValue() {
     override val id: Int
         get() = 0
+
+    override fun label(): String {
+        return "null"
+    }
 }

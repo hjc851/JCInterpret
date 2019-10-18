@@ -4,17 +4,13 @@ import jcinterpret.core.ExecutionConfig
 import jcinterpret.core.control.ReturnException
 import jcinterpret.core.control.ThrowException
 import jcinterpret.core.ctx.ExecutionContext
-import jcinterpret.core.ctx.ExecutionContextCloner
 import jcinterpret.core.ctx.frame.Instruction
-import jcinterpret.core.ctx.frame.synthetic.SyntheticExecutionFrame
-import jcinterpret.core.ctx.frame.synthetic.SyntheticInstruction
 import jcinterpret.core.descriptors.signature
 import jcinterpret.core.memory.heap.*
 import jcinterpret.core.memory.stack.*
-import jcinterpret.core.trace.TracerRecord
+import jcinterpret.core.trace.TraceRecord
 import jcinterpret.signature.*
 import org.eclipse.jdt.core.dom.*
-import org.eclipse.jdt.internal.compiler.ast.CharLiteral
 import java.lang.reflect.Modifier
 import java.util.*
 
@@ -221,7 +217,7 @@ class obj_put(val name: String, val fieldType: TypeSignature): InterpretedInstru
         val value = frame.pop()
         self.store(name, fieldType, value, ctx)
 
-        ctx.records.add(TracerRecord.ObjectFieldPut(ref, name, fieldType, oldValue, value))
+        ctx.records.add(TraceRecord.ObjectFieldPut(ref, name, fieldType, oldValue, value))
     }
 }
 
@@ -248,7 +244,7 @@ class stat_put(val staticType: ClassTypeSignature, val name: String, val fieldTy
         val oldValue = field.value
         field.value = value
 
-        ctx.records.add(TracerRecord.StaticFieldPut(staticType, name, fieldType, oldValue, value))
+        ctx.records.add(TraceRecord.StaticFieldPut(staticType, name, fieldType, oldValue, value))
     }
 }
 
@@ -273,7 +269,7 @@ object arr_store: InterpretedInstruction() {
 
         val oldValue = arr.get(index, arr.componentType, ctx)
         arr.put(index, value, arr.componentType, ctx)
-        ctx.records.add(TracerRecord.ArrayMemberPut(ref, index, oldValue, value))
+        ctx.records.add(TraceRecord.ArrayMemberPut(ref, index, oldValue, value))
     }
 }
 
@@ -288,7 +284,7 @@ object arr_store_rev: InterpretedInstruction() {
 
             val oldValue = arr.get(index, arr.componentType, ctx)
             arr.put(index, value, arr.componentType, ctx)
-            ctx.records.add(TracerRecord.ArrayMemberPut(ref, index, oldValue, value))
+            ctx.records.add(TraceRecord.ArrayMemberPut(ref, index, oldValue, value))
         } catch (e: Exception) {
             throw e
         }
@@ -743,7 +739,7 @@ object equals: InterpretedInstruction() {
         }
 
         frame.push(value)
-        ctx.records.add(TracerRecord.StackTransformation(lhs, rhs, value, BinaryOperator.EQUALS))
+        ctx.records.add(TraceRecord.StackTransformation(lhs, rhs, value, BinaryOperator.EQUALS))
     }
 }
 
@@ -915,7 +911,7 @@ class cast(val type: TypeSignature): InterpretedInstruction() {
                 TODO()
             } else {
                 val result = CastValue(value, desc.stackType)
-                ctx.records.add(TracerRecord.StackCast(value, result))
+                ctx.records.add(TraceRecord.StackCast(value, result))
             }
 
         } else {
@@ -977,7 +973,7 @@ class foreach_loop(val variable: String, val type: TypeSignature, val body: Stat
 
                 val oldItem = collection.get(index, componentType, ctx)
                 collection.put(index, item, componentType, ctx)
-                ctx.records.add(TracerRecord.ArrayMemberPut(ref, index, oldItem, item))
+                ctx.records.add(TraceRecord.ArrayMemberPut(ref, index, oldItem, item))
             }
 
             for (value in collection.storage.values.reversed()) {
@@ -992,7 +988,7 @@ class foreach_loop(val variable: String, val type: TypeSignature, val body: Stat
             popCount = 6
 
         } else if (collection is ObjectType) { /* Make an assumption that the object is a List */
-            val potenialValues = ctx.records.filterIsInstance<TracerRecord.InstanceLibraryMethodCall>()
+            val potenialValues = ctx.records.filterIsInstance<TraceRecord.InstanceLibraryMethodCall>()
                 .filter { it.scope == ref }
                 .filter { it.method.methodSignature.name.startsWith("add") }
                 .mapNotNull { it.params.lastOrNull() }
@@ -1080,12 +1076,12 @@ class conditional_if(val then: Statement, val otherwise: Statement?): Interprete
         } else {
 
             ctx.fork {
-                it.records.add(TracerRecord.Assertion(condition, false))
+                it.records.add(TraceRecord.Assertion(condition, false))
                 if (otherwise != null)
                     (it.currentFrame as InterpretedExecutionFrame).instructions.push(decode_stmt(otherwise))
             }
 
-            ctx.records.add(TracerRecord.Assertion(condition, true))
+            ctx.records.add(TraceRecord.Assertion(condition, true))
             frame.instructions.push(decode_stmt(then))
         }
     }
@@ -1103,11 +1099,11 @@ class conditional_ternary(val then: Expression, val otherwise: Expression): Inte
             }
         } else {
             ctx.fork {
-                it.records.add(TracerRecord.Assertion(condition, false))
+                it.records.add(TraceRecord.Assertion(condition, false))
                 (it.currentFrame as InterpretedExecutionFrame).instructions.push(decode_expr(otherwise))
             }
 
-            ctx.records.add(TracerRecord.Assertion(condition, true))
+            ctx.records.add(TraceRecord.Assertion(condition, true))
             frame.instructions.push(decode_expr(then))
         }
     }
@@ -1174,7 +1170,7 @@ class conditional_switch(val statements: List<Statement>): InterpretedInstructio
                         for (j in i downTo 0) {
                             val reverseStatement = statements[j]
                             if (reverseStatement is SwitchCase && !reverseStatement.isDefault) {
-                                frame.instructions.push(tracehook { TracerRecord.Assertion(it.currentFrame.pop(), false) })
+                                frame.instructions.push(tracehook { TraceRecord.Assertion(it.currentFrame.pop(), false) })
                                 frame.instructions.push(equals)
                                 frame.instructions.push(decode_expr(reverseStatement.expression))
                                 frame.instructions.push(push(ref))
@@ -1191,14 +1187,14 @@ class conditional_switch(val statements: List<Statement>): InterpretedInstructio
                             for (j in i downTo 0) {
                                 val reverseStatement = statements[j]
                                 if (reverseStatement is SwitchCase && !reverseStatement.isDefault) {
-                                    forkFrame.instructions.push(tracehook { TracerRecord.Assertion(it.currentFrame.pop(), false) })
+                                    forkFrame.instructions.push(tracehook { TraceRecord.Assertion(it.currentFrame.pop(), false) })
                                     forkFrame.instructions.push(equals)
                                     forkFrame.instructions.push(decode_expr(reverseStatement.expression))
                                     forkFrame.instructions.push(push(ref))
                                 }
                             }
 
-                            forkFrame.instructions.push(tracehook { TracerRecord.Assertion(it.currentFrame.pop(), true) })
+                            forkFrame.instructions.push(tracehook { TraceRecord.Assertion(it.currentFrame.pop(), true) })
                             forkFrame.instructions.push(equals)
                             forkFrame.instructions.push(decode_expr(statement.expression))
                             forkFrame.instructions.push(push(ref))
@@ -1256,7 +1252,7 @@ class conditional_switch(val statements: List<Statement>): InterpretedInstructio
                         for (j in i downTo 0) {
                             val reverseStatement = statements[j]
                             if (reverseStatement is SwitchCase && !reverseStatement.isDefault) {
-                                frame.instructions.push(tracehook { TracerRecord.Assertion(it.currentFrame.pop(), false) })
+                                frame.instructions.push(tracehook { TraceRecord.Assertion(it.currentFrame.pop(), false) })
                                 frame.instructions.push(equals)
                                 frame.instructions.push(decode_expr(reverseStatement.expression))
                                 frame.instructions.push(push(value))
@@ -1273,14 +1269,14 @@ class conditional_switch(val statements: List<Statement>): InterpretedInstructio
                             for (j in i downTo 0) {
                                 val reverseStatement = statements[j]
                                 if (reverseStatement is SwitchCase && !reverseStatement.isDefault) {
-                                    forkFrame.instructions.push(tracehook { TracerRecord.Assertion(it.currentFrame.pop(), false) })
+                                    forkFrame.instructions.push(tracehook { TraceRecord.Assertion(it.currentFrame.pop(), false) })
                                     forkFrame.instructions.push(equals)
                                     forkFrame.instructions.push(decode_expr(reverseStatement.expression))
                                     forkFrame.instructions.push(push(value))
                                 }
                             }
 
-                            forkFrame.instructions.push(tracehook { TracerRecord.Assertion(it.currentFrame.pop(), true) })
+                            forkFrame.instructions.push(tracehook { TraceRecord.Assertion(it.currentFrame.pop(), true) })
                             forkFrame.instructions.push(equals)
                             forkFrame.instructions.push(decode_expr(statement.expression))
                             forkFrame.instructions.push(push(value))
@@ -1296,7 +1292,7 @@ class conditional_switch(val statements: List<Statement>): InterpretedInstructio
 //  Tracing
 //
 
-class tracehook(val handle: (ExecutionContext) -> TracerRecord): InterpretedInstruction() {
+class tracehook(val handle: (ExecutionContext) -> TraceRecord): InterpretedInstruction() {
     override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
         val record = handle(ctx)
         ctx.records.add(record)

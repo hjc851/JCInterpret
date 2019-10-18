@@ -1,5 +1,6 @@
 package jcinterpret.core.memory.heap
 
+import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.memory.stack.StackValue
@@ -9,10 +10,10 @@ import java.io.Serializable
 import javax.xml.bind.annotation.XmlSeeAlso
 import javax.xml.bind.annotation.XmlType
 
-@XmlSeeAlso (
-    BoxedStackValueObject::class,
-    BoxedStringObject::class,
-    ClassObject::class
+@JsonSubTypes (
+    JsonSubTypes.Type(BoxedStackValueObject::class),
+    JsonSubTypes.Type(BoxedStringObject::class),
+    JsonSubTypes.Type(ClassObject::class)
 )
 @JsonTypeInfo(use= JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")
 abstract class BoxedObject<T> (
@@ -21,7 +22,7 @@ abstract class BoxedObject<T> (
     val value: T
 ): ObjectType(id, type, mutableMapOf()) {
 
-    override fun getField(name: String, type: TypeSignature, ctx: ExecutionContext): Field {
+    override fun getField(name: String, type: TypeSignature, intent: Intent, ctx: ExecutionContext): Field {
         throw IllegalStateException("Boxed values do not have fields")
     }
 }
@@ -30,7 +31,6 @@ abstract class BoxedObject<T> (
 //  Stack Values
 //
 
-@XmlType(name = "BoxedStackValueObject")
 @JsonTypeInfo(use= JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")
 class BoxedStackValueObject (
     id: Int,
@@ -45,21 +45,46 @@ class BoxedStackValueObject (
 //  String Values
 //
 
-@XmlSeeAlso (
-    ConcreteStringValue::class,
-    SymbolicStringValue::class,
-    StackValueStringValue::class,
-    CompositeStringValue::class
+@JsonSubTypes (
+    JsonSubTypes.Type(ConcreteStringValue::class),
+    JsonSubTypes.Type(SymbolicStringValue::class),
+    JsonSubTypes.Type(StackValueStringValue::class),
+    JsonSubTypes.Type(CompositeStringValue::class)
 )
 @JsonTypeInfo(use= JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")
-abstract class StringValue: Serializable
+abstract class StringValue: Serializable {
+    abstract fun label(): String
+}
 
-@XmlType(name = "ConcreteStringValue") data class ConcreteStringValue(val value: String): StringValue()
-@XmlType(name = "SymbolicStringValue") data class SymbolicStringValue(val value: Int): StringValue()
-@XmlType(name = "StackValueStringValue") data class StackValueStringValue(val value: StackValue): StringValue()
-@XmlType(name = "CompositeStringValue") data class CompositeStringValue(val lhs: StringValue, val rhs: StringValue): StringValue()
+@JsonTypeInfo(use= JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")
+data class ConcreteStringValue(val value: String): StringValue() {
+    override fun label(): String {
+        if (value.isEmpty()) return "EMPTY"
+        else return value
+    }
+}
 
-@XmlType(name = "BoxedStringObject")
+@JsonTypeInfo(use= JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")
+data class SymbolicStringValue(val value: Int): StringValue() {
+    override fun label(): String {
+        return "#$value STRING"
+    }
+}
+
+@JsonTypeInfo(use= JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")
+data class StackValueStringValue(val value: StackValue): StringValue() {
+    override fun label(): String {
+        return value.label()
+    }
+}
+
+@JsonTypeInfo(use= JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")
+data class CompositeStringValue(val lhs: StringValue, val rhs: StringValue): StringValue() {
+    override fun label(): String {
+        return lhs.label() + " + " + rhs.label()
+    }
+}
+
 @JsonTypeInfo(use= JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")
 class BoxedStringObject (
     id: Int,
@@ -74,7 +99,6 @@ class BoxedStringObject (
 //  Class Value
 //
 
-@XmlType(name = "ClassObject")
 @JsonTypeInfo(use= JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")
 class ClassObject (
     id: Int,

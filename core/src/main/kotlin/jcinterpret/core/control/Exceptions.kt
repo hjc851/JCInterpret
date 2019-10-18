@@ -17,3 +17,5 @@ class ThrowException(val ref: StackReference): JCException()
 class HaltException(val msg: String): JCException()
 
 class ClassAreaFault(val sigs: Set<ClassTypeSignature>): JCException()
+
+class UnsupportedLanguageFeature(val msg: String): JCException()

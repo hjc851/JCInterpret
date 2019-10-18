@@ -10,10 +10,9 @@ import jcinterpret.core.descriptors.DescriptorLibrary
 import jcinterpret.core.memory.stack.StackReference
 import jcinterpret.core.memory.stack.StackValue
 import jcinterpret.core.source.SourceLibrary
-import jcinterpret.core.trace.TracerRecord
+import jcinterpret.core.trace.TraceRecord
 import jcinterpret.signature.QualifiedMethodSignature
 import java.util.*
-import java.util.concurrent.atomic.AtomicInteger
 
 object JavaConcolicInterpreterFactory {
     fun build (
@@ -43,12 +42,11 @@ object JavaConcolicInterpreterFactory {
         val instructions = Stack<SyntheticInstruction>()
         val operands = Stack<StackValue>()
 
-        instructions.push(Tracehook { TracerRecord.EntryMethod(entryPoint) })
         if (methodDescriptor.isStatic) {
             instructions.push(InvokeStatic(entryPoint))
 
             for (ptype in methodDescriptor.parameters.reversed()) {
-                instructions.push(Tracehook { TracerRecord.EntryParameter(it.currentFrame.peek()) })
+                instructions.push(Tracehook { TraceRecord.EntryParameter(it.currentFrame.peek()) })
                 instructions.push(AllocateSymbolic(ptype))
             }
 
@@ -56,13 +54,15 @@ object JavaConcolicInterpreterFactory {
             instructions.push(InvokeVirtual(entryPoint.methodSignature))
 
             for (ptype in methodDescriptor.parameters.reversed()) {
-                instructions.push(Tracehook { TracerRecord.EntryParameter(it.currentFrame.peek()) })
+                instructions.push(Tracehook { TraceRecord.EntryParameter(it.currentFrame.peek()) })
                 instructions.push(AllocateSymbolic(ptype))
             }
 
-            instructions. push(Tracehook { TracerRecord.EntryScope((it.currentFrame.peek()) as StackReference) })
+            instructions.push(Tracehook { TraceRecord.EntryScope((it.currentFrame.peek()) as StackReference) })
             instructions.push(AllocateSymbolic(entryPoint.declaringClassSignature))
         }
+
+        instructions.push(Tracehook { TraceRecord.EntryMethod(methodDescriptor.qualifiedSignature) })
 
         val frame = SyntheticExecutionFrame("BOOTSTRAP $entryPoint", instructions, operands)
         val frames = Stack<ExecutionFrame>()
