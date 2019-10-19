@@ -2,8 +2,7 @@ package jcinterpret.core.descriptors
 
 import jcinterpret.signature.ClassTypeSignature
 import jcinterpret.signature.QualifiedMethodSignature
-import org.eclipse.jdt.core.dom.AbstractTypeDeclaration
-import org.eclipse.jdt.core.dom.CompilationUnit
+import org.eclipse.jdt.core.dom.*
 import java.lang.Exception
 
 class BindingDescriptorResolver (
@@ -13,22 +12,30 @@ class BindingDescriptorResolver (
     private val classes = mutableMapOf<ClassTypeSignature, TypeBindingClassTypeDescriptor>()
 
     init {
+        val visitor = Visitor()
         for (cu in compilationUnits) {
-            for (type in cu.types()) {
-                type as AbstractTypeDeclaration
-
-                addType(type)
-            }
+            cu.accept(visitor)
         }
     }
 
-    private fun addType(type: AbstractTypeDeclaration) {
-        val desc = TypeBindingClassTypeDescriptor(type.resolveBinding())
-        classes[desc.signature] = desc
+    private inner class Visitor : ASTVisitor() {
+        override fun visit(type: TypeDeclaration): Boolean {
+            val desc = TypeBindingClassTypeDescriptor(type.resolveBinding())
+            classes[desc.signature] = desc
+            return true
+        }
 
-        type.bodyDeclarations()
-            .filterIsInstance<AbstractTypeDeclaration>()
-            .forEach { addType(it) }
+        override fun visit(type: EnumDeclaration): Boolean {
+            val desc = TypeBindingClassTypeDescriptor(type.resolveBinding())
+            classes[desc.signature] = desc
+            return true
+        }
+
+        override fun visit(type: AnnotationTypeDeclaration): Boolean {
+            val desc = TypeBindingClassTypeDescriptor(type.resolveBinding())
+            classes[desc.signature] = desc
+            return true
+        }
     }
 
     override fun tryResolveDescriptor(sig: ClassTypeSignature): ClassTypeDescriptor? {

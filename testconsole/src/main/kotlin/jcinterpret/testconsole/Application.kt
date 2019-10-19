@@ -4,6 +4,7 @@ import jcinterpret.document.ConfigDocument
 import jcinterpret.document.DocumentUtils
 import jcinterpret.core.ExecutionConfig
 import jcinterpret.core.JavaConcolicInterpreterFactory
+import jcinterpret.core.TooManyContextsException
 import jcinterpret.core.control.UnsupportedLanguageFeature
 import jcinterpret.core.descriptors.DescriptorLibraryFactory
 import jcinterpret.core.descriptors.qualifiedSignature
@@ -18,8 +19,6 @@ import java.nio.file.Paths
 import kotlin.streams.toList
 
 fun main(args: Array<String>) {
-    ExecutionConfig.loggingEnabled = false
-
     if (args.count() != 1)
         error("One argument is expected listing the path to a valid config document")
 
@@ -87,9 +86,9 @@ fun main(args: Array<String>) {
     println()
 
     println("Generating Execution Traces")
-    val executionTraces = projects.mapNotNull { project ->
+    val executionTraces = projects.mapIndexedNotNull { index, project ->
         try {
-            println("Executing ${project.id}")
+            println("Executing $index ${project.id}")
             val result = project to project.entries.map { entry ->
                 val sig = entry.binding.qualifiedSignature()
                 println("\tInvoking $sig")
@@ -97,11 +96,18 @@ fun main(args: Array<String>) {
                 val traces = interpreter.execute()
                 return@map entry to traces
             }.toList().toMap()
-            return@mapNotNull result
+            return@mapIndexedNotNull result
         } catch (e: UnsupportedLanguageFeature) {
             println("Removing ${project.id} due to: ${e.msg}")
-            return@mapNotNull null
+            return@mapIndexedNotNull null
+        } catch (e: TooManyContextsException) {
+            System.err.println("Too many contexts in ${project.id}")
+            return@mapIndexedNotNull null
         }
+//        catch (e: Exception) {
+//            System.err.println("Unknown error in ${project.id}")
+//            return@mapIndexedNotNull null
+//        }
     }.toList().toMap()
 
 //    println("Writing results")
@@ -124,6 +130,8 @@ fun main(args: Array<String>) {
 //            DocumentUtils.writeObject(fout, document)
 //        }
 //    }
+
+    return
 
     println("Displaying graphs")
     for ((project, entryTraces) in executionTraces) {

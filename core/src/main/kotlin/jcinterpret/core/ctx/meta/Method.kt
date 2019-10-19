@@ -29,6 +29,7 @@ class InterpretedMethod(desc: MethodDescriptor, val decl: MethodDeclaration): Me
         val locals = Locals()
         val exceptionScopes = Stack<ExceptionScope>()
         val breakScopes = Stack<BreakScope>()
+        val continueScopes = Stack<ContinueScope>()
 
         if (!desc.isStatic) {
             val thistype = ctx.descriptorLibrary.getDescriptor(sig.declaringClassSignature)
@@ -73,7 +74,7 @@ class InterpretedMethod(desc: MethodDescriptor, val decl: MethodDeclaration): Me
             if (desc.isStatic) ctx.records.add(TraceRecord.StaticLibraryMethodCall(desc.qualifiedSignature, params, result))
             else ctx.records.add(TraceRecord.InstanceLibraryMethodCall(desc.qualifiedSignature, selfRef!!, params, result))
         } else {
-            val frame = InterpretedExecutionFrame(instructions, operands, locals, exceptionScopes, breakScopes, desc.qualifiedSignature)
+            val frame = InterpretedExecutionFrame(instructions, operands, locals, exceptionScopes, breakScopes, continueScopes, desc.qualifiedSignature)
             ctx.frames.push(frame)
         }
     }

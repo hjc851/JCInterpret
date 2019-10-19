@@ -155,6 +155,7 @@ object ExecutionContextCloner {
                     clone(oldFrame.locals),
                     oldFrame.exceptions.clone() as Stack<ExceptionScope>,
                     oldFrame.breaks.clone() as Stack<BreakScope>,
+                    oldFrame.continues.clone() as Stack<ContinueScope>,
                     oldFrame.method
                 )
             }

@@ -54,15 +54,31 @@ object block_pop: InterpretedInstruction() {
 
 //  Break & Continue
 
-class break_push(val label: String?, val instructionSize: Int, val operandsSize: Int, val localDepth: Int, val continueInstruction: InterpretedInstruction?, val continueValue: StackValue?): InterpretedInstruction() {
+class break_push(val label: String?, val instructionSize: Int, val operandsSize: Int, val localDepth: Int): InterpretedInstruction() {
     override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
-        frame.breaks.push(BreakScope(label, instructionSize, operandsSize, localDepth, continueInstruction, continueValue))
+        frame.breaks.push(BreakScope(label, instructionSize, operandsSize, localDepth))
     }
 }
 
 object break_pop: InterpretedInstruction() {
     override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
         frame.breaks.pop()
+    }
+}
+
+class continue_push(val label: String?,val continueInstruction: InterpretedInstruction, val continueValue: StackValue?, val instructionOffset: Int): InterpretedInstruction() {
+    override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
+        val instructionSize = frame.instructions.size - instructionOffset
+        val operandsSize = frame.operands.size
+        val localDepth = frame.locals.scopes.size
+
+        frame.continues.push(ContinueScope(label, instructionSize, operandsSize, localDepth, continueInstruction, continueValue))
+    }
+}
+
+object continue_pop: InterpretedInstruction() {
+    override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
+        frame.continues.pop()
     }
 }
 
@@ -172,6 +188,7 @@ class obj_allocate(val type: ClassTypeSignature): InterpretedInstruction() {
                 val locals = Locals()
                 val exceptionScopes = Stack<ExceptionScope>()
                 val breakScopes = Stack<BreakScope>()
+                val continueScopes = Stack<ContinueScope>()
                 val desc = QualifiedMethodSignature(
                     type,
                     MethodSignature(
@@ -188,7 +205,7 @@ class obj_allocate(val type: ClassTypeSignature): InterpretedInstruction() {
                 locals.assign("this", obj.ref())
 
                 val frame =
-                    InterpretedExecutionFrame(instructions, operands, locals, exceptionScopes, breakScopes, desc)
+                    InterpretedExecutionFrame(instructions, operands, locals, exceptionScopes, breakScopes, continueScopes, desc)
                 ctx.frames.push(frame)
             }
         }
@@ -436,13 +453,15 @@ class break_statement(val label: String?): InterpretedInstruction() {
                 break
             }
         }
+
+        throw IllegalStateException("No break found")
     }
 }
 
 class continue_statement(val label: String?): InterpretedInstruction() {
     override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
-        while (frame.breaks.isNotEmpty()) {
-            val scope = frame.breaks.pop()
+        while (frame.continues.isNotEmpty()) {
+            val scope = frame.continues.peek()
 
             if (scope.label == label) {
 
@@ -450,14 +469,18 @@ class continue_statement(val label: String?): InterpretedInstruction() {
                 while (frame.operands.size > scope.operandsSize) frame.operands.pop()
                 while (frame.locals.scopes.size > scope.localDepth) frame.locals.scopes.pop()
 
-                val contInstruction = scope.contInstruction ?: throw IllegalStateException("Continue statement requires a continue instruction")
+                val contInstruction = scope.contInstruction
                 frame.instructions.push(contInstruction)
                 val contValue = scope.contValue
                 if (contValue != null) frame.operands.push(contValue)
 
-                break
+                return
             }
+
+            frame.continues.pop()
         }
+
+        throw IllegalStateException("No continue found")
     }
 }
 
@@ -566,11 +589,11 @@ object div: InterpretedInstruction() {
         val lhs = frame.pop()
 
         val result = if (lhs is ReferenceValue && rhs is ReferenceValue) {
-            TODO()
+            ObjectOperatorUtils.div(lhs, rhs, ctx)
         } else if (lhs is ReferenceValue && rhs !is ReferenceValue) {
-            TODO()
+            ObjectOperatorUtils.div(lhs, rhs, ctx)
         } else if (lhs !is ReferenceValue && rhs is ReferenceValue) {
-            TODO()
+            ObjectOperatorUtils.div(lhs, rhs, ctx)
         } else {
             PrimaryOperationUtils.div(lhs, rhs, ctx)
         }
@@ -908,6 +931,8 @@ class cast(val type: TypeSignature): InterpretedInstruction() {
             val desc = ctx.descriptorLibrary.getDescriptor(type)
 
             if (value is StackReference) {
+                val obj = ctx.heapArea.dereference(value)
+
                 TODO()
             } else {
                 val result = CastValue(value, desc.stackType)
@@ -920,13 +945,18 @@ class cast(val type: TypeSignature): InterpretedInstruction() {
     }
 }
 
-class instanceof(val type: TypeSignature): InterpretedInstruction() {
+class instanceof(val type: ClassTypeSignature): InterpretedInstruction() {
     override fun execute(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
         validateSignatures(ctx, type)
 
         val value = frame.pop() as StackReference
+        val obj = ctx.heapArea.dereference(value)
 
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val objtype = ctx.classArea.getClass(obj.lookupType)
+        val checkingType = ctx.classArea.getClass(type)
+
+        val result = objtype.isAssignableTo(checkingType)
+        frame.push(StackBoolean(result))
     }
 }
 
@@ -1221,7 +1251,8 @@ class conditional_switch(val statements: List<Statement>): InterpretedInstructio
                             .forEach { frame.instructions.push(decode_stmt(it)) }
 
                     } else {
-                        val expr = statement.expression
+                        var expr = statement.expression
+                        while (expr is ParenthesizedExpression) expr = expr.expression
 
                         val match = when (expr) {
                             is NumberLiteral -> expr.token == value.value.toString()

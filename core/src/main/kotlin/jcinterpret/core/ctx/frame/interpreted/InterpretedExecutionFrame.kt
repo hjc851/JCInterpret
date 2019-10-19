@@ -18,6 +18,7 @@ class InterpretedExecutionFrame (
     val locals: Locals,
     val exceptions: Stack<ExceptionScope>,
     val breaks: Stack<BreakScope>,
+    val continues: Stack<ContinueScope>,
     override val method: QualifiedMethodSignature
 ): MethodBoundExecutionFrame() {
 
@@ -80,7 +81,14 @@ class BreakScope (
     val label: String?,
     val instructionsSize: Int,
     val operandsSize: Int,
+    val localDepth: Int
+)
+
+class ContinueScope (
+    val label: String?,
+    val instructionsSize: Int,
+    val operandsSize: Int,
     val localDepth: Int,
-    val contInstruction: InterpretedInstruction?,
+    val contInstruction: InterpretedInstruction,
     val contValue: StackValue?
 )

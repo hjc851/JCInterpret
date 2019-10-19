@@ -162,6 +162,9 @@ class HeapArea (
         if (type.className == "java/lang/String")
             return getOrAllocateString("")
 
+        if (type.className == "java/lang/Integer")
+            return allocateSymbolicBoxedObject(ctx, type, PrimitiveTypeSignature.INT)
+
         val id = nextId()
         val obj = ConcreteObject(id, type, mutableMapOf())
         storage[id] = obj

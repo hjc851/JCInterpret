@@ -93,10 +93,12 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
 
         push(block_pop)
         push(break_pop)
+        push(continue_pop)
         push(instr)
         add(node.expression)
         add(node.body)
-        push(break_push(null, instructionSize, operandsSize, localDepth, instr, StackBoolean(true)))
+        push(continue_push(null, instr, StackBoolean(true), 3))
+        push(break_push(null, instructionSize, operandsSize, localDepth))
         push(block_push)
 
         return false
@@ -111,26 +113,33 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
 
         push(block_pop)
         push(break_pop)
+        push(continue_pop)
         push(instr)
         add(node.expression)
-        push(break_push(null, instructionSize, operandsSize, localDepth, instr, StackBoolean(true)))
+        push(continue_push(null, instr, StackBoolean(true), 2))
+        push(break_push(null, instructionSize, operandsSize, localDepth))
         push(block_push)
 
         return false
     }
 
+    // TODO There is a problem when using a continue statement in a for loop
+    // The scope declaring the initialiser variables is destroyed
     override fun visit(node: ForStatement): Boolean {
         val instr = for_loop(node.expression, node.body, node.updaters() as MutableList<Expression>)
+
         val instructionSize = frame.instructions.size
         val operandsSize = frame.operands.size
         val localDepth = frame.locals.scopes.size
 
         push(block_pop)
         push(break_pop)
+        push(continue_pop)
         push(instr)
         add(node.expression)
+        push(continue_push(null, instr, StackBoolean(true), 2))
         node.initializers().reversed().forEach { (it as ASTNode).accept(this) }
-        push(break_push(null, instructionSize, operandsSize, localDepth, instr, StackBoolean(true)))
+        push(break_push(null, instructionSize, operandsSize, localDepth))
         push(block_push)
 
         return false
@@ -145,9 +154,11 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
 
         push(block_pop)
         push(break_pop)
+        push(continue_pop)
         push(instr)
         add(node.expression)
-        push(break_push(null, instructionSize, operandsSize, localDepth, instr, null))
+        push(continue_push(null, instr, null, 2))
+        push(break_push(null, instructionSize, operandsSize, localDepth))
         push(block_push)
 
         return false
@@ -172,7 +183,7 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
         push(break_pop)
         push(conditional_switch(node.statements() as List<Statement>))
         add(node.expression)
-        push(break_push(null, instructionSize, operandsSize, localDepth, null, null))
+        push(break_push(null, instructionSize, operandsSize, localDepth))
         push(block_push)
 
         return false
@@ -222,8 +233,10 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
         val localDepth = frame.locals.scopes.size
 
         push(break_pop)
+//        push(continue_pop)
         add(node.body)
-        push(break_push(node.label.identifier, instructionSize, operandsSize, localDepth, null, null))
+//        push(continue_push(node.label.identifier, null, null, 0))
+        push(break_push(node.label.identifier, instructionSize, operandsSize, localDepth))
 
         return false
     }
@@ -888,7 +901,7 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
     }
 
     override fun visit(node: InstanceofExpression): Boolean {
-        push(instanceof(node.rightOperand.resolveBinding().signature()))
+        push(instanceof(node.rightOperand.resolveBinding().signature() as ClassTypeSignature))
         add(node.leftOperand)
 
         return false
@@ -914,5 +927,11 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
 
     override fun visit(node: TypeMethodReference): Boolean {
         throw UnsupportedLanguageFeature("Method references are not supported")
+    }
+
+    //  Not used
+
+    override fun visit(node: TypeDeclarationStatement): Boolean {
+        return false
     }
 }
