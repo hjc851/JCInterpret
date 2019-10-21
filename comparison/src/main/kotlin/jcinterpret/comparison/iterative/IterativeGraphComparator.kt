@@ -16,7 +16,7 @@ import java.util.concurrent.ForkJoinPool
 import java.util.function.Supplier
 
 object IterativeGraphComparator {
-    fun compareAsync(pool: Executor = ForkJoinPool.commonPool(), lhs: Graph, rhs: Graph): CompletableFuture<Pair<Double, Double>> = CompletableFuture.supplyAsync(Supplier<Pair<Double, Double>> { compare(lhs, rhs) }, pool)
+    fun compareAsync(lhs: Graph, rhs: Graph, pool: Executor = ForkJoinPool.commonPool()): CompletableFuture<Pair<Double, Double>> = CompletableFuture.supplyAsync(Supplier<Pair<Double, Double>> { compare(lhs, rhs) }, pool)
     fun compare(lhs: Graph, rhs: Graph): Pair<Double, Double> {
         val comparator = Comparator(lhs, rhs)
         return comparator.compare()

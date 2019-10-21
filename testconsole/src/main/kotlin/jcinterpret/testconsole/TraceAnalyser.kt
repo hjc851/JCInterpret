@@ -25,8 +25,6 @@ fun main(args: Array<String>) {
         }
     }
 
-
-
     for (project in projects) {
         val id = project.fileName.toString()
 
