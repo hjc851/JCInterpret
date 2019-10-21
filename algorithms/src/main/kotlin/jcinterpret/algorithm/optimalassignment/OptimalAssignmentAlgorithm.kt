@@ -1,6 +1,8 @@
 package jcinterpret.algorithm.optimalassignment
 
 abstract class OptimalAssignmentAlgorithm {
+    abstract fun execute(costs: Array<DoubleArray>): IntArray
+
     abstract fun <X, Y> execute (
         litems: List<X>,
         ritems: List<Y>,

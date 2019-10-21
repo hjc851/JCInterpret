@@ -1,5 +1,6 @@
-package jcinterpret.graph
+package jcinterpret.graph.optimisation
 
+import jcinterpret.graph.copyAttributesFrom
 import jcinterpret.graph.execution.NodeAttributeKeys
 import jcinterpret.graph.execution.NodeType
 import org.graphstream.graph.Edge

@@ -97,7 +97,7 @@ fun main(args: Array<String>) {
                 return@map entry to traces
             }.toList().toMap()
 
-            println("\tSaving... ${project.id} ${Date()}")
+            println("Saving... ${project.id} ${Date()}")
             val projDir = dir.resolve(project.id)
             Files.createDirectory(projDir)
 

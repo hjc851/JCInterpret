@@ -412,10 +412,11 @@ object ExecutionGraphBuilder {
             val node = nodeFor(record.ref)
             val entry = graph.getNode<Node>(NodeType.ENTRYPOINT.name)
 
+            node.setAttribute(ENTRYPARAMETER, true)
+
             edgeBetween(node, entry) {
                 setAttribute(UICLASS, CLASS_SUPPLIES)
                 setAttribute(EDGETYPE, EdgeType.SUPPLIES)
-                setAttribute(ENTRYPARAMETER, true)
             }
         }
 

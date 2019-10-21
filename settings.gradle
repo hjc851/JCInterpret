@@ -8,4 +8,5 @@ include 'signatures'
 include 'testconsole'
 include 'entry'
 include 'graph'
+include 'comparison'
 

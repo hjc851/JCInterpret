@@ -10,7 +10,7 @@ import jcinterpret.core.descriptors.DescriptorLibraryFactory
 import jcinterpret.core.descriptors.qualifiedSignature
 import jcinterpret.core.source.SourceLibraryFactory
 import jcinterpret.entry.EntryPointFinder
-import jcinterpret.graph.LiteralChainGraphPruner
+import jcinterpret.graph.optimisation.LiteralChainGraphPruner
 import jcinterpret.graph.execution.ExecutionGraphBuilder
 import jcinterpret.parser.Parser
 import org.graphstream.ui.view.Viewer
@@ -131,28 +131,26 @@ fun main(args: Array<String>) {
 //        }
 //    }
 
-    return
-
-    println("Displaying graphs")
-    for ((project, entryTraces) in executionTraces) {
-        for ((entry, traces) in entryTraces) {
-            traces.forEachIndexed { index, trace ->
-                val egraph = ExecutionGraphBuilder.build("${project.id} ${entry.binding.qualifiedSignature()} #$index", trace)
-                val prunegraph = LiteralChainGraphPruner.prune(egraph.graph)
-
-                egraph.graph.display().apply {
-                    this.closeFramePolicy = Viewer.CloseFramePolicy.CLOSE_VIEWER
-                }
-
-                prunegraph.display().apply {
-                    this.closeFramePolicy = Viewer.CloseFramePolicy.CLOSE_VIEWER
-                }
-
-                print("Press any key to continue -> ")
-                readLine()
-            }
-        }
-    }
+//    println("Displaying graphs")
+//    for ((project, entryTraces) in executionTraces) {
+//        for ((entry, traces) in entryTraces) {
+//            traces.forEachIndexed { index, trace ->
+//                val egraph = ExecutionGraphBuilder.build("${project.id} ${entry.binding.qualifiedSignature()} #$index", trace)
+//                val prunegraph = LiteralChainGraphPruner.prune(egraph.graph)
+//
+//                egraph.graph.display().apply {
+//                    this.closeFramePolicy = Viewer.CloseFramePolicy.CLOSE_VIEWER
+//                }
+//
+//                prunegraph.display().apply {
+//                    this.closeFramePolicy = Viewer.CloseFramePolicy.CLOSE_VIEWER
+//                }
+//
+//                print("Press any key to continue -> ")
+//                readLine()
+//            }
+//        }
+//    }
 
     println("Finished")
 }

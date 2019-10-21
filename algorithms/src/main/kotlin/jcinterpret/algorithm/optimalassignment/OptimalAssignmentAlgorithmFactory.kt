@@ -1,9 +1,10 @@
 package jcinterpret.algorithm.optimalassignment
 
-object GreedyOptimalAssignmentAlgorithm: OptimalAssignmentAlgorithm() {
+object OptimalAssignmentAlgorithmFactory: OptimalAssignmentAlgorithm() {
+    var provider: OptimalAssignmentAlgorithm = HungarianOptimalAssignmentAlgorithm
 
     override fun execute(costs: Array<DoubleArray>): IntArray {
-        return GreedyOptimalAssignmentAlgorithm.execute(costs)
+        return provider.execute(costs)
     }
 
     override fun <X, Y> execute(
@@ -12,10 +13,6 @@ object GreedyOptimalAssignmentAlgorithm: OptimalAssignmentAlgorithm() {
         costs: Array<DoubleArray>,
         matchThreshold: Double
     ): OptimalAssignmentResult<X, Y> {
-
-        val algo = GreedyAlgorithm(costs)
-        val result = algo.execute()
-
-        return makeResult(litems, ritems, costs, matchThreshold, result)
+        return provider.execute(litems, ritems, costs, matchThreshold)
     }
 }
