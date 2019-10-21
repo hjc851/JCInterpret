@@ -18,6 +18,7 @@ import java.io.Serializable
     JsonSubTypes.Type(TraceRecord.StaticFieldPut::class),
     JsonSubTypes.Type(TraceRecord.ObjectFieldPut::class),
     JsonSubTypes.Type(TraceRecord.ArrayMemberPut::class),
+    JsonSubTypes.Type(TraceRecord.ArrayMemberGet::class),
     JsonSubTypes.Type(TraceRecord.DefaultInstanceFieldValue::class),
     JsonSubTypes.Type(TraceRecord.DefaultStaticFieldValue::class),
     JsonSubTypes.Type(TraceRecord.SynthesisedReturnValue::class),

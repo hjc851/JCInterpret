@@ -153,6 +153,11 @@ class HeapArea (
         return obj
     }
 
+    fun allocateSymbolicStringValue(): SymbolicStringValue {
+        val id = nextId()
+        return SymbolicStringValue(id)
+    }
+
     //
     //  Concrete
     //

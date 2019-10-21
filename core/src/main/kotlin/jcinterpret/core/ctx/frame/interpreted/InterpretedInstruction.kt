@@ -450,7 +450,7 @@ class break_statement(val label: String?): InterpretedInstruction() {
                 while (frame.operands.size > scope.operandsSize) frame.operands.pop()
                 while (frame.locals.scopes.size > scope.localDepth) frame.locals.scopes.pop()
 
-                break
+                return
             }
         }
 
@@ -690,11 +690,11 @@ object or: InterpretedInstruction() {
         val lhs = frame.pop()
 
         val result = if (lhs is ReferenceValue && rhs is ReferenceValue) {
-            TODO()
+            ObjectOperatorUtils.or(lhs, rhs, ctx)
         } else if (lhs is ReferenceValue && rhs !is ReferenceValue) {
-            TODO()
+            ObjectOperatorUtils.or(lhs, rhs, ctx)
         } else if (lhs !is ReferenceValue && rhs is ReferenceValue) {
-            TODO()
+            ObjectOperatorUtils.or(lhs, rhs, ctx)
         } else {
             PrimaryOperationUtils.or(lhs, rhs, ctx)
         }
@@ -933,7 +933,28 @@ class cast(val type: TypeSignature): InterpretedInstruction() {
             if (value is StackReference) {
                 val obj = ctx.heapArea.dereference(value)
 
-                TODO()
+                if (obj is BoxedStackValueObject) {
+                    val value = obj.value
+
+                    if (value.type == desc.stackType) {
+                        frame.pop()
+                        frame.push(value)
+                    } else {
+                        frame.pop()
+
+                        if (value is ConcreteValue<*>) {
+                            TODO()
+                        } else {
+                            val newVal = CastValue(value, desc.stackType)
+                            ctx.records.add(TraceRecord.StackCast(value, newVal))
+                            frame.push(newVal)
+                        }
+                    }
+
+                } else {
+                    ctx.heapArea.promote(ctx, value, desc.boxedType)
+                }
+
             } else {
                 val result = CastValue(value, desc.stackType)
                 ctx.records.add(TraceRecord.StackCast(value, result))

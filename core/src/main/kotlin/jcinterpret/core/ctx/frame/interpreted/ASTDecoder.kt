@@ -296,7 +296,15 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
     //  Invocation
 
     override fun visit(node: ClassInstanceCreation): Boolean {
+        val type = node.resolveTypeBinding()
         val binding = node.resolveConstructorBinding()
+
+
+        val dclass = type.declaringClass
+        val static = Modifier.isStatic(type.modifiers)
+
+        if (dclass != null && !static)
+            throw UnsupportedLanguageFeature("Non-static inner class ${type.signature()} cannot be interpreted (inner classes not implemented)")
 
         if (node.anonymousClassDeclaration != null)
             throw UnsupportedLanguageFeature("Anonymous classes are not implemented")

@@ -51,17 +51,18 @@ class ArrayTypeDescriptor (
 enum class PrimitiveTypeDescriptor (
     override val signature: PrimitiveTypeSignature,
     override val defaultValue: StackValue,
-    override val stackType: StackType
+    override val stackType: StackType,
+    val boxedType: ClassTypeSignature
 ): TypeDescriptor {
-    BOOLEAN(PrimitiveTypeSignature.BOOLEAN, StackBoolean(false), StackType.BOOLEAN),
-    BYTE(PrimitiveTypeSignature.BYTE, StackByte(0), StackType.BYTE),
-    CHAR(PrimitiveTypeSignature.CHAR, StackChar('\u0000'), StackType.CHAR),
-    SHORT(PrimitiveTypeSignature.SHORT, StackShort(0), StackType.SHORT),
-    INT(PrimitiveTypeSignature.INT, StackInt(0), StackType.INT),
-    LONG(PrimitiveTypeSignature.LONG, StackLong(0), StackType.LONG),
-    FLOAT(PrimitiveTypeSignature.FLOAT, StackFloat(0.0f), StackType.FLOAT),
-    DOUBLE(PrimitiveTypeSignature.DOUBLE, StackDouble(0.0), StackType.DOUBLE),
-    VOID (PrimitiveTypeSignature.VOID, StackNil, StackType.VOID)
+    BOOLEAN(PrimitiveTypeSignature.BOOLEAN, StackBoolean(false), StackType.BOOLEAN, BoxedTypeSignature.BOOLEAN),
+    BYTE(PrimitiveTypeSignature.BYTE, StackByte(0), StackType.BYTE, BoxedTypeSignature.BYTE),
+    CHAR(PrimitiveTypeSignature.CHAR, StackChar('\u0000'), StackType.CHAR, BoxedTypeSignature.CHARACTER),
+    SHORT(PrimitiveTypeSignature.SHORT, StackShort(0), StackType.SHORT, BoxedTypeSignature.SHORT),
+    INT(PrimitiveTypeSignature.INT, StackInt(0), StackType.INT, BoxedTypeSignature.INTEGER),
+    LONG(PrimitiveTypeSignature.LONG, StackLong(0), StackType.LONG, BoxedTypeSignature.LONG),
+    FLOAT(PrimitiveTypeSignature.FLOAT, StackFloat(0.0f), StackType.FLOAT, BoxedTypeSignature.FLOAT),
+    DOUBLE(PrimitiveTypeSignature.DOUBLE, StackDouble(0.0), StackType.DOUBLE, BoxedTypeSignature.DOUBLE),
+    VOID (PrimitiveTypeSignature.VOID, StackNil, StackType.VOID, BoxedTypeSignature.VOID)
 }
 
 abstract class MethodDescriptor: Descriptor {

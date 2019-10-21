@@ -44,6 +44,19 @@ object ObjectOperatorUtils {
             val lvalue = lobj.value
             val rvalue = robj.value
             return PrimaryOperationUtils.add(lvalue, rvalue, ctx)
+        } else if (lobj !is BoxedObject<*> && robj is BoxedStringObject) {
+            val lstr = ctx.heapArea.allocateSymbolicStringValue()
+            ctx.records.add(TraceRecord.Stringification(lhs, lstr))
+
+            val rstr = robj.value
+            val value = CompositeStringValue(lstr, rstr)
+
+            ctx.records.add(TraceRecord.StringConcat(lstr, rstr, value))
+
+            val str = ctx.heapArea.allocateSymbolicString(ctx, value)
+            val ref = str.ref()
+            return ref
+
         } else {
             TODO()
         }
@@ -335,6 +348,46 @@ object ObjectOperatorUtils {
             val rval = rhs
 
             return PrimaryOperationUtils.div(lval, rval, ctx)
+        }
+
+        TODO()
+    }
+
+    fun or(lhs: ReferenceValue, rhs: ReferenceValue, ctx: ExecutionContext): StackValue {
+        val lobj = ctx.heapArea.dereference(lhs)
+        val robj = ctx.heapArea.dereference(rhs)
+
+        if (lobj is BoxedStackValueObject && robj is BoxedStackValueObject) {
+            val lval = lobj.value
+            val rval = robj.value
+
+            return PrimaryOperationUtils.or(lval, rval, ctx)
+        }
+
+        TODO()
+    }
+
+    fun or(lhs: StackValue, rhs: ReferenceValue, ctx: ExecutionContext): StackValue {
+        val robj = ctx.heapArea.dereference(rhs)
+
+        if (robj is BoxedStackValueObject) {
+            val lval = lhs
+            val rval = robj.value
+
+            return PrimaryOperationUtils.or(lval, rval, ctx)
+        }
+
+        TODO()
+    }
+
+    fun or(lhs: ReferenceValue, rhs: StackValue, ctx: ExecutionContext): StackValue {
+        val lobj = ctx.heapArea.dereference(lhs)
+
+        if (lobj is BoxedStackValueObject) {
+            val lval = lobj.value
+            val rval = rhs
+
+            return PrimaryOperationUtils.or(lval, rval, ctx)
         }
 
         TODO()

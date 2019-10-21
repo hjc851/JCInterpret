@@ -102,6 +102,9 @@ class ExecutionContext (
 
                 val frame = classArea.buildClassLoaderFrame(e.sigs)
                 frames.push(frame)
+            } catch (e: ArithmeticException) {
+                records.add(TraceRecord.Halt(e.localizedMessage))
+                break@execution
             }
         }
 
