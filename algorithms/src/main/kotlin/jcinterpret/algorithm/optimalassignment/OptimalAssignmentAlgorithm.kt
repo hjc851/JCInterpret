@@ -23,7 +23,7 @@ abstract class OptimalAssignmentAlgorithm {
             if (rIndex != -1) {
                 val lhs = litems[lIndex]
                 val rhs = ritems[rIndex]
-                val similarity = costs[lIndex][rIndex]
+                val similarity = 1.0 - costs[lIndex][rIndex]
 
                 if (similarity >= matchThreshold) {
                     matches.add(Triple(lhs, rhs, similarity))

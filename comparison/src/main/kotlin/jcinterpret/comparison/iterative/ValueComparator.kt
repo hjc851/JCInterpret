@@ -32,7 +32,7 @@ object ValueComparator {
 
         if (lvalue is StackNil && rvalue is StackNil) return true
 
-        if (lvalue is StackReference && rvalue is StackReference) TODO()
+        if (lvalue is StackReference && rvalue is StackReference) return lvalue.id == rvalue.id
 
         if (lvalue is SymbolicValue && rvalue is SymbolicValue) return true
 

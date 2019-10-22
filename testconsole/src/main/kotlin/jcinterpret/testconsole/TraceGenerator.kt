@@ -51,7 +51,7 @@ fun main(args: Array<String>) {
         .toList()
         .sorted()
 
-    val dir = output.resolve(Instant.now().toString())
+    val dir = output.resolve("${document.title}_${Instant.now().nano}")
     Files.createDirectory(dir)
 
     //  Pre-Processing: Parse the projects
@@ -97,7 +97,7 @@ fun main(args: Array<String>) {
                 return@map entry to traces
             }.toList().toMap()
 
-            println("Saving... ${project.id} ${Date()}")
+            println("Saving... ${project.id} at ${Date()}")
             val projDir = dir.resolve(project.id)
             Files.createDirectory(projDir)
 

@@ -414,7 +414,7 @@ object ExecutionGraphBuilder {
 
             node.setAttribute(ENTRYPARAMETER, true)
 
-            edgeBetween(node, entry) {
+            edgeBetween(entry, node) {
                 setAttribute(UICLASS, CLASS_SUPPLIES)
                 setAttribute(EDGETYPE, EdgeType.SUPPLIES)
             }

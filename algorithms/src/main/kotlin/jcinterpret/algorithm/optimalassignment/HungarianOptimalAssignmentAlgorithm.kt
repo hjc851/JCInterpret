@@ -13,6 +13,16 @@ object HungarianOptimalAssignmentAlgorithm: OptimalAssignmentAlgorithm() {
         matchThreshold: Double
     ): OptimalAssignmentResult<X, Y> {
 
+        for (i in 0 until costs.size) {
+            val row = costs[i]
+            for (j in 0 until row.size) {
+                val value = row[j]
+
+                if (value.isNaN() || value.isInfinite())
+                    costs[i][j] = Double.MAX_VALUE
+            }
+        }
+
         val algo = HungarianAlgorithm(costs)
         val result = algo.execute()
 
