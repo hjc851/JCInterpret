@@ -2,16 +2,16 @@ package jcinterpret.testconsole.utils
 
 object BestMatchFinder {
 
-    var MATCH_THRESHOLD = 0.5
+    var MATCH_THRESHOLD = 0.7
 
-    data class NonexclusiveMatch (
-        val lmatches: List<Triple<TraceModel, TraceModel, Double>>,
-        val rmatches: List<Triple<TraceModel, TraceModel, Double>>
+    data class NonexclusiveMatch<T> (
+        val lmatches: List<Triple<T, T, Double>>,
+        val rmatches: List<Triple<T, T, Double>>
     )
 
-    fun bestMatches(ltraces: List<TraceModel>, rtraces: List<TraceModel>, costs: Array<DoubleArray>): NonexclusiveMatch {
-        val bestMatchesL = mutableListOf<Triple<TraceModel, TraceModel, Double>>()
-        val bestMatchesR = mutableListOf<Triple<TraceModel, TraceModel, Double>>()
+    fun <T> bestMatches(ltraces: List<T>, rtraces: List<T>, costs: Array<DoubleArray>): NonexclusiveMatch<T> {
+        val bestMatchesL = mutableListOf<Triple<T, T, Double>>()
+        val bestMatchesR = mutableListOf<Triple<T, T, Double>>()
 
         for (l in 0 until ltraces.size) {
             var highest = 0.0

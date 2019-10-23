@@ -44,20 +44,20 @@ object DocumentUtils {
         fout.close()
     }
 
-    val kryo = Kryo().apply {
-        isRegistrationRequired = false
-        references = true
-    }
-
-    fun <T> readKObject(path: Path, type: Class<T>): T {
-        return Files.newInputStream(path).use { fin ->
-            kryo.readObject(Input(fin), type)
-        }
-    }
-
-    fun <T> writeKObject(path: Path, obj: T) {
-        Files.newOutputStream(path).use { fout ->
-            kryo.writeObject(Output(fout), obj)
-        }
-    }
+//    val kryo = Kryo().apply {
+//        isRegistrationRequired = false
+//        references = true
+//    }
+//
+//    fun <T> readKObject(path: Path, type: Class<T>): T {
+//        return Files.newInputStream(path).use { fin ->
+//            kryo.readObject(Input(fin), type)
+//        }
+//    }
+//
+//    fun <T> writeKObject(path: Path, obj: T) {
+//        Files.newOutputStream(path).use { fout ->
+//            kryo.writeObject(Output(fout), obj)
+//        }
+//    }
 }

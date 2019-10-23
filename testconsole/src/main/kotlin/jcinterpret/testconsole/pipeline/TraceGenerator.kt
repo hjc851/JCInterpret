@@ -1,4 +1,4 @@
-package jcinterpret.testconsole
+package jcinterpret.testconsole.pipeline
 
 import jcinterpret.core.ExecutionConfig
 import jcinterpret.core.JavaConcolicInterpreterFactory
