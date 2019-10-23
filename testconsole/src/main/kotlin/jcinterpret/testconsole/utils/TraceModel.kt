@@ -16,10 +16,14 @@ data class TraceModel (
     val secondaryConcerns: List<SecondaryConcern>
 )
 
-fun buildTraceModel(id: String, idx: Int, trace: ExecutionTrace): TraceModel {
-    val egraph = ExecutionGraphBuilder.build("", trace)
-    val taint = TaintedSubgraphFinder.find(egraph.graph)
-    val sc = SecondaryConcernFinder.find(egraph.graph, taint)
+object TraceModelBuilder {
+    fun build(id: String, idx: Int, trace: ExecutionTrace): TraceModel {
+        val egraph = ExecutionGraphBuilder.build("", trace)
+        val taint = TaintedSubgraphFinder.find(egraph.graph)
+        val sc = SecondaryConcernFinder.find(egraph.graph, taint)
 
-    return TraceModel(id, idx, egraph, taint, sc)
+        return TraceModel(id, idx, egraph, taint, sc)
+    }
 }
+
+fun buildTraceModel(id: String, idx: Int, trace: ExecutionTrace): TraceModel = TraceModelBuilder.build(id, idx, trace)

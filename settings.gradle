@@ -9,4 +9,5 @@ include 'testconsole'
 include 'entry'
 include 'graph'
 include 'comparison'
+include 'gs-core'
 

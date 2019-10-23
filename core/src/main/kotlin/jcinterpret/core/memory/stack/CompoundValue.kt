@@ -2,6 +2,7 @@ package jcinterpret.core.memory.stack
 
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import java.io.Serializable
 
 //
 //  Compound Value
@@ -38,7 +39,7 @@ data class BinaryOperationValue (val lhs: StackValue, val rhs: StackValue, overr
     }
 }
 
-interface Operator
+interface Operator: Serializable
 
 object NotOperator: Operator
 object ConcatOperator: Operator

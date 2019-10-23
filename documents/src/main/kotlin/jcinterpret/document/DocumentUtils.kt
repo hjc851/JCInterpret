@@ -8,6 +8,9 @@ import java.io.Serializable
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.reflect.KClass
+import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.io.Input
+import com.esotericsoftware.kryo.io.Output
 
 object DocumentUtils {
 
@@ -24,7 +27,7 @@ object DocumentUtils {
         jsonMapper.writeValue(path.toFile(), document)
     }
 
-    fun <T: Serializable> readObject(path: Path, type: KClass<T>): T {
+    fun <T: Any> readObject(path: Path, type: KClass<T>): T {
         val fin = Files.newInputStream(path)
         val oin = ObjectInputStream(fin)
         val obj = oin.readObject() as T
@@ -33,11 +36,28 @@ object DocumentUtils {
         return obj
     }
 
-    fun <T: Serializable> writeObject(path: Path, document: T) {
+    fun <T: Any> writeObject(path: Path, document: T) {
         val fout = Files.newOutputStream(path)
         val oout = ObjectOutputStream(fout)
         oout.writeObject(document)
         oout.close()
         fout.close()
+    }
+
+    val kryo = Kryo().apply {
+        isRegistrationRequired = false
+        references = true
+    }
+
+    fun <T> readKObject(path: Path, type: Class<T>): T {
+        return Files.newInputStream(path).use { fin ->
+            kryo.readObject(Input(fin), type)
+        }
+    }
+
+    fun <T> writeKObject(path: Path, obj: T) {
+        Files.newOutputStream(path).use { fout ->
+            kryo.writeObject(Output(fout), obj)
+        }
     }
 }

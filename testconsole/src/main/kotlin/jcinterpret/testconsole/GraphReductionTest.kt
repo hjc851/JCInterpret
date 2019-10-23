@@ -43,24 +43,26 @@ fun main(args: Array<String>) {
     }
 }
 
-val T_CONDENSE_THESHOLD = 0.7
+val T_CONDENSE_THESHOLD = 0.9
 
 fun condenseTraces(traces: List<TraceModel>): List<TraceModel> {
-    println("Condensing ...")
+    println("Condensing ${traces.size} ...")
 
     val reducedTraces = traces.toMutableList()
 
     var l = 0
-    while (l < traces.size) {
-        val lhs = traces[l]
+    while (l < reducedTraces.size) {
+        val lhs = reducedTraces[l]
         val riter = reducedTraces.iterator()
 
         while (riter.hasNext()) {
             val rhs = riter.next()
 
-            val tsim = IterativeGraphComparator.compare(lhs.ex.graph, rhs.ex.graph)
-            if (tsim.avg() >= T_CONDENSE_THESHOLD)
-                riter.remove()
+            if (System.identityHashCode(lhs) != System.identityHashCode(rhs)) {
+                val tsim = IterativeGraphComparator.compare(lhs.ex.graph, rhs.ex.graph)
+                if (tsim.avg() >= T_CONDENSE_THESHOLD)
+                    riter.remove()
+            }
         }
 
         l++
