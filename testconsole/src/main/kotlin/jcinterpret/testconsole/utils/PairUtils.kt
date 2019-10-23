@@ -1,4 +1,4 @@
-package jcinterpret.testconsole
+package jcinterpret.testconsole.utils
 
 fun Pair<Double, Double>.min(): Double {
     return minOf(first, second)

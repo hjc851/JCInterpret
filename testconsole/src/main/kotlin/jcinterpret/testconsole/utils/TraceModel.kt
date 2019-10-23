@@ -1,4 +1,4 @@
-package jcinterpret.testconsole
+package jcinterpret.testconsole.utils
 
 import jcinterpret.core.trace.ExecutionTrace
 import jcinterpret.graph.analysis.concern.SecondaryConcern

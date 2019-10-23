@@ -1,4 +1,4 @@
-package jcinterpret.testconsole
+package jcinterpret.testconsole.utils
 
 import jcinterpret.core.descriptors.DescriptorLibrary
 import jcinterpret.core.source.SourceLibrary

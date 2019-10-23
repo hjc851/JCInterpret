@@ -1,4 +1,4 @@
-package jcinterpret.testconsole
+package jcinterpret.testconsole.utils
 
 import jcinterpret.comparison.iterative.IterativeGraphComparator
 import jcinterpret.graph.analysis.concern.toGraph
@@ -82,9 +82,21 @@ object TraceComparator {
 
         logg.println()
 
-        val (bestLMinMatches, bestRMinMatches) = BestMatchFinder.bestMatches(ltraces, rtraces, minCosts)
-        val (bestLMaxMatches, bestRMaxMatches) = BestMatchFinder.bestMatches(ltraces, rtraces, maxCosts)
-        val (bestLAvgMatches, bestRAvgmatches) = BestMatchFinder.bestMatches(ltraces, rtraces, avgCosts)
+        val (bestLMinMatches, bestRMinMatches) = BestMatchFinder.bestMatches(
+            ltraces,
+            rtraces,
+            minCosts
+        )
+        val (bestLMaxMatches, bestRMaxMatches) = BestMatchFinder.bestMatches(
+            ltraces,
+            rtraces,
+            maxCosts
+        )
+        val (bestLAvgMatches, bestRAvgmatches) = BestMatchFinder.bestMatches(
+            ltraces,
+            rtraces,
+            avgCosts
+        )
 
         logg.println("MINMATCH")
         logg.println("L-R")

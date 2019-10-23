@@ -1,18 +1,13 @@
 package jcinterpret.testconsole
 
-import jcinterpret.comparison.iterative.IterativeGraphComparator
 import jcinterpret.core.trace.EntryPointExecutionTraces
-import jcinterpret.core.trace.ExecutionTrace
 import jcinterpret.document.DocumentUtils
-import jcinterpret.graph.analysis.concern.SecondaryConcernFinder
-import jcinterpret.graph.analysis.concern.toGraph
-import jcinterpret.graph.analysis.taint.TaintedSubgraphFinder
-import jcinterpret.graph.execution.ExecutionGraphBuilder
+import jcinterpret.testconsole.utils.TraceComparator
+import jcinterpret.testconsole.utils.buildTraceModel
 import java.io.PrintWriter
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
-import java.util.concurrent.CompletableFuture
 import kotlin.streams.toList
 
 fun main(args: Array<String>) {
@@ -37,7 +32,13 @@ fun main(args: Array<String>) {
             .map { DocumentUtils.readObject(it, EntryPointExecutionTraces::class) }
             .toList()
             .flatMap { it.executionTraces.toList() }
-            .mapIndexed { index, executionTrace -> buildTraceModel(lid, index, executionTrace) }
+            .mapIndexed { index, executionTrace ->
+                buildTraceModel(
+                    lid,
+                    index,
+                    executionTrace
+                )
+            }
         
         for (r in l+1 until projects.size) {
             val rproj = projects[r]
@@ -50,7 +51,13 @@ fun main(args: Array<String>) {
                 .map { DocumentUtils.readObject(it, EntryPointExecutionTraces::class) }
                 .toList()
                 .flatMap { it.executionTraces.toList() }
-                .mapIndexed { index, executionTrace -> buildTraceModel(rid, index, executionTrace) }
+                .mapIndexed { index, executionTrace ->
+                    buildTraceModel(
+                        rid,
+                        index,
+                        executionTrace
+                    )
+                }
 
             logg.println("$lid-${ltraces.size}:$rid-${rtraces.size}")
             val comparisons = ltraces.size * rtraces.size

@@ -10,10 +10,9 @@ import jcinterpret.core.descriptors.DescriptorLibraryFactory
 import jcinterpret.core.descriptors.qualifiedSignature
 import jcinterpret.core.source.SourceLibraryFactory
 import jcinterpret.entry.EntryPointFinder
-import jcinterpret.graph.optimisation.LiteralChainGraphPruner
-import jcinterpret.graph.execution.ExecutionGraphBuilder
 import jcinterpret.parser.Parser
-import org.graphstream.ui.view.Viewer
+import jcinterpret.testconsole.utils.FileUtils
+import jcinterpret.testconsole.utils.Project
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.streams.toList
@@ -79,7 +78,14 @@ fun main(args: Array<String>) {
 
         val entries = EntryPointFinder.find(compilationUnits, eps)
 
-        return@mapNotNull Project(id, path, compilationUnits, descriptorLibrary, sourceLibrary, entries)
+        return@mapNotNull Project(
+            id,
+            path,
+            compilationUnits,
+            descriptorLibrary,
+            sourceLibrary,
+            entries
+        )
     }.toList()
 
     println("Using ${projects.size} of ${projectPaths.size}")
@@ -97,18 +103,21 @@ fun main(args: Array<String>) {
                 return@map entry to traces
             }.toList().toMap()
             return@mapIndexedNotNull result
-        } catch (e: UnsupportedLanguageFeature) {
+        }
+        catch (e: UnsupportedLanguageFeature) {
             println("Removing ${project.id} due to: ${e.msg}")
             return@mapIndexedNotNull null
-        } catch (e: TooManyContextsException) {
+        }
+        catch (e: TooManyContextsException) {
             System.err.println("Too many contexts in ${project.id}")
             return@mapIndexedNotNull null
         }
-//        catch (e: Exception) {
-//            System.err.println("Unknown error in ${project.id}")
-//            return@mapIndexedNotNull null
-//        }
+        catch (e: Exception) {
+            System.err.println("Unknown error in ${project.id}")
+            return@mapIndexedNotNull null
+        }
     }.toList().toMap()
+
 
 //    println("Writing results")
 //    val dir = output.resolve(Instant.now().toString())

@@ -12,6 +12,8 @@ import jcinterpret.document.ConfigDocument
 import jcinterpret.document.DocumentUtils
 import jcinterpret.entry.EntryPointFinder
 import jcinterpret.parser.Parser
+import jcinterpret.testconsole.utils.FileUtils
+import jcinterpret.testconsole.utils.Project
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.time.Instant
@@ -84,7 +86,14 @@ fun main(args: Array<String>) {
 
         val entries = EntryPointFinder.find(compilationUnits, eps)
 
-        return@mapNotNull Project(id, path, compilationUnits, descriptorLibrary, sourceLibrary, entries)
+        return@mapNotNull Project(
+            id,
+            path,
+            compilationUnits,
+            descriptorLibrary,
+            sourceLibrary,
+            entries
+        )
     }.toList()
 
     println("Generating Execution Traces")

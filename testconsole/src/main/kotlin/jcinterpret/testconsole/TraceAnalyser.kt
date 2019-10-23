@@ -4,6 +4,7 @@ import jcinterpret.comparison.iterative.IterativeGraphComparator
 import jcinterpret.core.trace.EntryPointExecutionTraces
 import jcinterpret.document.DocumentUtils
 import jcinterpret.graph.analysis.concern.toGraph
+import jcinterpret.testconsole.utils.buildTraceModel
 import org.graphstream.ui.view.Viewer
 import java.nio.file.Files
 import java.nio.file.Path
@@ -41,14 +42,26 @@ private fun compare(lproj: Path, rproj: Path) {
         .use { it.toList() }
         .map { DocumentUtils.readObject(it, EntryPointExecutionTraces::class) }
         .flatMap { it.executionTraces.toList() }
-        .mapIndexed { index, executionTrace -> buildTraceModel(lid, index, executionTrace) }
+        .mapIndexed { index, executionTrace ->
+            buildTraceModel(
+                lid,
+                index,
+                executionTrace
+            )
+        }
 
     val rtraces = Files.list(rproj)
         .filter { !Files.isDirectory(it) && !Files.isHidden(it) && it.fileName.toString().endsWith(".ser")}
         .use { it.toList() }
         .map { DocumentUtils.readObject(it, EntryPointExecutionTraces::class) }
         .flatMap { it.executionTraces.toList() }
-        .mapIndexed { index, executionTrace -> buildTraceModel(rid, index, executionTrace) }
+        .mapIndexed { index, executionTrace ->
+            buildTraceModel(
+                rid,
+                index,
+                executionTrace
+            )
+        }
 
     for (ltrace in ltraces) {
         for (rtrace in rtraces) {

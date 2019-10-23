@@ -1,4 +1,4 @@
-package jcinterpret.testconsole
+package jcinterpret.testconsole.utils
 
 import java.io.IOException
 import java.nio.file.FileVisitResult

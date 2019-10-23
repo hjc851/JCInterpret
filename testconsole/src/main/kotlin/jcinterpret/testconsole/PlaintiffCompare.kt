@@ -2,6 +2,8 @@ package jcinterpret.testconsole
 
 import jcinterpret.core.trace.EntryPointExecutionTraces
 import jcinterpret.document.DocumentUtils
+import jcinterpret.testconsole.utils.TraceComparator
+import jcinterpret.testconsole.utils.buildTraceModel
 import java.io.PrintWriter
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -33,7 +35,13 @@ fun main(args: Array<String>) {
         .map { DocumentUtils.readObject(it, EntryPointExecutionTraces::class) }
         .toList()
         .flatMap { it.executionTraces.toList() }
-        .mapIndexed { index, executionTrace -> CompletableFuture.supplyAsync { buildTraceModel(plaintiff, index, executionTrace) } }
+        .mapIndexed { index, executionTrace -> CompletableFuture.supplyAsync {
+            buildTraceModel(
+                plaintiff,
+                index,
+                executionTrace
+            )
+        } }
         .map { it.get() }
 
     for (defendent in defendents) {
@@ -52,7 +60,13 @@ fun main(args: Array<String>) {
             .map { DocumentUtils.readObject(it, EntryPointExecutionTraces::class) }
             .toList()
             .flatMap { it.executionTraces.toList() }
-            .mapIndexed { index, executionTrace -> CompletableFuture.supplyAsync { buildTraceModel(plaintiff, index, executionTrace) } }
+            .mapIndexed { index, executionTrace -> CompletableFuture.supplyAsync {
+                buildTraceModel(
+                    plaintiff,
+                    index,
+                    executionTrace
+                )
+            } }
             .map { it.get() }
 
         logg.println("$plaintiff-${plaintifftraces.size}:$did-${rtraces.size}")
