@@ -1,6 +1,7 @@
 package jcinterpret.core.ctx.meta
 
 import jcinterpret.core.ctx.ExecutionContext
+import jcinterpret.core.ctx.frame.interpreted.*
 import jcinterpret.core.ctx.frame.synthetic.AllocateClassType
 import jcinterpret.core.ctx.frame.synthetic.SyntheticExecutionFrame
 import jcinterpret.core.ctx.frame.synthetic.SyntheticInstruction
@@ -8,9 +9,10 @@ import jcinterpret.core.ctx.frame.synthetic.ValidateClassDependencies
 import jcinterpret.core.descriptors.ClassTypeDescriptor
 import jcinterpret.core.memory.heap.Field
 import jcinterpret.core.trace.TraceRecord
-import jcinterpret.signature.ArrayTypeSignature
-import jcinterpret.signature.ClassTypeSignature
-import jcinterpret.signature.TypeSignature
+import jcinterpret.signature.*
+import org.eclipse.jdt.core.dom.TypeDeclaration
+import org.eclipse.jdt.core.dom.VariableDeclaration
+import java.lang.reflect.Modifier
 import java.util.*
 
 class ClassArea (
@@ -43,13 +45,65 @@ class ClassArea (
         if (isClassLoaded(cls.signature))
             return
 
-        val staticFields = cls.fields.values
+        val decl = ctx.sourceLibrary.getDeclaration(cls.signature) as? TypeDeclaration?
+
+        val staticFieldInitializers = decl?.fields
+            ?.filter { Modifier.isStatic(it.modifiers) }
+            ?.flatMap { it.fragments() }
+            ?.map { (it as VariableDeclaration).name.identifier to it.initializer }
+            ?.toMap()
+            ?: emptyMap()
+
+        val staticFieldDescriptors = cls.fields.values
             .filter { it.isStatic }
+
+        val staticFields = staticFieldDescriptors
             .map {
-                val field = Field(it.name, it.type, ctx.heapArea.allocateSymbolic(ctx, it.type))
-                ctx.records.add(TraceRecord.DefaultStaticFieldValue(cls.signature, field.name, field.value))
+                val field = Field(it.name, it.type, ctx.descriptorLibrary.getDescriptor(it.type).defaultValue)
                 return@map it.name to field
             }.toMap().toMutableMap()
+
+        val instructions = Stack<InterpretedInstruction>()
+
+        staticFieldDescriptors.reversed()
+            .forEach {
+
+            val initialiser = staticFieldInitializers[it.name]
+
+            if (initialiser != null) {
+
+                instructions.push(stat_put(cls.signature, it.name, it.type))
+                instructions.push(decode_expr(initialiser))
+
+            } else {
+                val field = staticFields[it.name]!!
+                field.value = ctx.heapArea.allocateSymbolic(ctx, it.type)
+                ctx.records.add(TraceRecord.DefaultStaticFieldValue(cls.signature, field.name, field.value))
+            }
+        }
+
+        if (instructions.isNotEmpty()) {
+            val frame = InterpretedExecutionFrame (
+                instructions,
+                Stack(),
+                Locals(),
+                Stack(),
+                Stack(),
+                Stack(),
+                QualifiedMethodSignature(
+                    cls.signature,
+                    MethodSignature(
+                        "<clinit>",
+                        MethodTypeSignature(
+                            emptyArray(),
+                            PrimitiveTypeSignature.VOID
+                        )
+                    )
+                )
+            )
+
+            ctx.frames.push(frame)
+        }
 
         val staticMethods = cls.methods.values
             .filter { it.isStatic }

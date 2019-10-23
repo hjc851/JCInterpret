@@ -77,6 +77,8 @@ fun main(args: Array<String>) {
             return@mapNotNull null
         }
 
+
+
         val descriptorLibrary = DescriptorLibraryFactory.build(compilationUnits, libraries)
         val sourceLibrary = SourceLibraryFactory.build(compilationUnits)
 
@@ -98,6 +100,10 @@ fun main(args: Array<String>) {
             }.toList().toMap()
 
             println("Saving... ${project.id} at ${Date()}")
+            result.forEach { (ep, traces) ->
+                println("EP: ${ep.binding.qualifiedSignature()}: ${traces.size} traces")
+            }
+
             val projDir = dir.resolve(project.id)
             Files.createDirectory(projDir)
 
