@@ -5,6 +5,7 @@ import jcinterpret.core.JavaConcolicInterpreterFactory
 import jcinterpret.core.TooManyContextsException
 import jcinterpret.core.control.UnsupportedLanguageFeature
 import jcinterpret.core.descriptors.DescriptorLibraryFactory
+import jcinterpret.core.descriptors.UnresolvableDescriptorException
 import jcinterpret.core.descriptors.qualifiedSignature
 import jcinterpret.core.source.SourceLibraryFactory
 import jcinterpret.core.trace.EntryPointExecutionTraces
@@ -79,8 +80,6 @@ fun main(args: Array<String>) {
             return@mapNotNull null
         }
 
-
-
         val descriptorLibrary = DescriptorLibraryFactory.build(compilationUnits, libraries)
         val sourceLibrary = SourceLibraryFactory.build(compilationUnits)
 
@@ -108,15 +107,13 @@ fun main(args: Array<String>) {
                 return@map entry to traces
             }.toList().toMap()
 
-            println("Saving... ${project.id} at ${Date()}")
-            result.forEach { (ep, traces) ->
-                println("EP: ${ep.binding.qualifiedSignature()}: ${traces.size} traces")
-            }
-
             val projDir = dir.resolve(project.id)
             Files.createDirectory(projDir)
 
+            println("Saving... ${project.id} at ${Date()}")
             for ((entry, traces) in result) {
+                println("\t${entry.binding.qualifiedSignature()}: ${traces.size} traces")
+
                 val msig = entry.binding.qualifiedSignature()
                 val fout = projDir.resolve(msig.toString().replace("/", ".") + ".ser")
                 Files.createFile(fout)
@@ -133,6 +130,8 @@ fun main(args: Array<String>) {
             println("Removing ${project.id} due to: ${e.msg}")
         } catch (e: TooManyContextsException) {
             System.err.println("Too many contexts in ${project.id}")
+        } catch (e: UnresolvableDescriptorException) {
+            System.err.println("Cannot resolve descriptor for type ${e.sig}")
         }
     }
 

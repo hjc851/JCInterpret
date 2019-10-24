@@ -34,13 +34,13 @@ fun main(args: Array<String>) {
                 .map { DocumentUtils.readObject(it, EntryPointExecutionTraces::class) }
                 .toList()
 
-            entryPointTraces.parallelStream()
+            entryPointTraces
                 .forEach { eptraces ->
                     val epsig = eptraces.entryPoint.toString().replace("/", ".")
                         .replace("\"", ".")
 
                     val epout = pout.resolve(epsig)
-                    if (Files.notExists(epout) )Files.createDirectory(epout)
+                    if (Files.notExists(epout)) Files.createDirectory(epout)
 
                     println("Building trace models for $epsig")
                     val models = eptraces.executionTraces
@@ -69,7 +69,11 @@ fun main(args: Array<String>) {
                             DocumentUtils.writeObject(epout.resolve("$index-heap.ser"), heap)
                             DocumentUtils.writeObject(epout.resolve("$index-assertions.ser"), assertions)
                         }
+
+                    println("Finished writing data")
                 }
+
+            System.gc()
         }
 
     println("Finished")

@@ -4,13 +4,10 @@ import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
-import java.io.Serializable
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.reflect.KClass
-import com.esotericsoftware.kryo.Kryo
-import com.esotericsoftware.kryo.io.Input
-import com.esotericsoftware.kryo.io.Output
+import kotlin.reflect.full.cast
 
 object DocumentUtils {
 
@@ -33,7 +30,7 @@ object DocumentUtils {
         val obj = oin.readObject() as T
         oin.close()
         fin.close()
-        return obj
+        return type.cast(obj)
     }
 
     fun <T: Any> writeObject(path: Path, document: T) {
@@ -43,21 +40,4 @@ object DocumentUtils {
         oout.close()
         fout.close()
     }
-
-//    val kryo = Kryo().apply {
-//        isRegistrationRequired = false
-//        references = true
-//    }
-//
-//    fun <T> readKObject(path: Path, type: Class<T>): T {
-//        return Files.newInputStream(path).use { fin ->
-//            kryo.readObject(Input(fin), type)
-//        }
-//    }
-//
-//    fun <T> writeKObject(path: Path, obj: T) {
-//        Files.newOutputStream(path).use { fout ->
-//            kryo.writeObject(Output(fout), obj)
-//        }
-//    }
 }

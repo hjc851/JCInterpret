@@ -194,6 +194,12 @@ object ObjectOperatorUtils {
     fun less(lhs: StackValue, rhs: ReferenceValue, ctx: ExecutionContext): StackValue {
         val robj = ctx.heapArea.dereference(rhs)
 
+        if (robj is BoxedStackValueObject) {
+            val rvalue = robj.value
+
+            return PrimaryOperationUtils.less(lhs, rvalue, ctx)
+        }
+
         TODO()
     }
 
