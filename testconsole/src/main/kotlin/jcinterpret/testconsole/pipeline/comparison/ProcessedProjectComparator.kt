@@ -23,20 +23,25 @@ object ProcessedProjectComparator {
             .flatMap { it.keys }
             .size
 
-        if (lsize == 0 || rsize == 0)
-            return Result(lhs, rhs, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+//        if (lsize == 0 || rsize == 0)
+//            return Result(lhs, rhs, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
-        val minCosts = Array(lsize) { DoubleArray(rsize) }
-        val maxCosts = Array(lsize) { DoubleArray(rsize) }
-        val avgCosts = Array(lsize) { DoubleArray(rsize) }
+        if (lsize == 0 || rsize == 0)
+            return Result(lhs, rhs, 0.0, 0.0)
+
+//        val minCosts = Array(lsize) { DoubleArray(rsize) }
+//        val maxCosts = Array(lsize) { DoubleArray(rsize) }
+//        val avgCosts = Array(lsize) { DoubleArray(rsize) }
+
+        val costs = Array(lsize) { DoubleArray(rsize) }
 
         val permits = lsize * rsize
         val sem = Semaphore(permits)
 
         var lcounter = 0
 
-        val ltracearr = Array<String>(lsize) { "" }//ArrayList<String>(lsize)
-        val rtracearr = Array<String>(rsize) { "" }//ArrayList<String>(rsize)
+        val ltracearr = Array(lsize) { "" }
+        val rtracearr = Array(rsize) { "" }
 
         for ((lep, ltraces) in lhs.traces) {
             for (ltrace in ltraces) {
@@ -73,13 +78,16 @@ object ProcessedProjectComparator {
 //                            println("Compared $lid vs $rid graphs")
                             taintsim to scsim
                         }.thenAccept { (taintsim, scsim) ->
-                            val minSim = (taintsim.min() + scsim.min()).div(2)
-                            val maxSim = (taintsim.max() + scsim.max()).div(2)
-                            val avgSim = (taintsim.avg() + scsim.avg()).div(2)
+                            val sim = (taintsim + scsim) / 2.0
+                            costs[lindex][rindex] = 1.0 - sim
 
-                            minCosts[lindex][rindex] = 1.0 - minSim
-                            maxCosts[lindex][rindex] = 1.0 - maxSim
-                            avgCosts[lindex][rindex] = 1.0 - avgSim
+//                            val minSim = (taintsim.min() + scsim.min()).div(2)
+//                            val maxSim = (taintsim.max() + scsim.max()).div(2)
+//                            val avgSim = (taintsim.avg() + scsim.avg()).div(2)
+//
+//                            minCosts[lindex][rindex] = 1.0 - minSim
+//                            maxCosts[lindex][rindex] = 1.0 - maxSim
+//                            avgCosts[lindex][rindex] = 1.0 - avgSim
 
 //                            println("Releasing for $lid vs $rid: ${minSim}; ${avgSim}; ${maxSim};")
                             sem.release()
@@ -96,68 +104,83 @@ object ProcessedProjectComparator {
         do {
 //            println("Waiting on ${permits - sem.availablePermits()} of ${permits} permits ....")
         } while (!sem.tryAcquire(permits, 10, TimeUnit.SECONDS))
-
 //        println("Acquired ${permits} permits")
 
         val lids = ltracearr.toList()
         val rids = rtracearr.toList()
 
-        val (bestLMinMatches, bestRMinMatches) = BestMatchFinder.bestMatches(
+        val (bestLMatches, bestRMatches) = BestMatchFinder.bestMatches(
             lids,
             rids,
-            minCosts
-        )
-        val (bestLMaxMatches, bestRMaxMatches) = BestMatchFinder.bestMatches(
-            lids,
-            rids,
-            maxCosts
-        )
-        val (bestLAvgMatches, bestRAvgmatches) = BestMatchFinder.bestMatches(
-            lids,
-            rids,
-            avgCosts
+            costs
         )
 
-        val lminsim = bestLMinMatches.map { it.third }
-            .sum()
-            .div(ltracearr.size)
+        val lsim = bestLMatches.map { it.third }
+            .average() ?: 0.0
 
-        val lmaxsim = bestLMaxMatches.map { it.third }
-            .sum()
-            .div(ltracearr.size)
+        val rsim = bestRMatches.map { it.third }
+            .average() ?: 0.0
 
-        val lavgsim = bestLAvgMatches.map { it.third }
-            .sum()
-            .div(ltracearr.size)
+        return Result(lhs, rhs, lsim, rsim)
 
-        val rminsim = bestRMinMatches.map { it.third }
-            .sum()
-            .div(rtracearr.size)
-
-        val rmaxsim = bestRMaxMatches.map { it.third }
-            .sum()
-            .div(rtracearr.size)
-
-        val ravgsim = bestRAvgmatches.map { it.third }
-            .sum()
-            .div(rtracearr.size)
-
-        return Result (
-            lhs, rhs,
-            lminsim, lavgsim, lmaxsim,
-            rminsim, ravgsim, rmaxsim
-        )
+//        val (bestLMinMatches, bestRMinMatches) = BestMatchFinder.bestMatches(
+//            lids,
+//            rids,
+//            minCosts
+//        )
+//        val (bestLMaxMatches, bestRMaxMatches) = BestMatchFinder.bestMatches(
+//            lids,
+//            rids,
+//            maxCosts
+//        )
+//        val (bestLAvgMatches, bestRAvgmatches) = BestMatchFinder.bestMatches(
+//            lids,
+//            rids,
+//            avgCosts
+//        )
+//
+//        val lminsim = bestLMinMatches.map { it.third }
+//            .sum()
+//            .div(ltracearr.size)
+//
+//        val lmaxsim = bestLMaxMatches.map { it.third }
+//            .sum()
+//            .div(ltracearr.size)
+//
+//        val lavgsim = bestLAvgMatches.map { it.third }
+//            .sum()
+//            .div(ltracearr.size)
+//
+//        val rminsim = bestRMinMatches.map { it.third }
+//            .sum()
+//            .div(rtracearr.size)
+//
+//        val rmaxsim = bestRMaxMatches.map { it.third }
+//            .sum()
+//            .div(rtracearr.size)
+//
+//        val ravgsim = bestRAvgmatches.map { it.third }
+//            .sum()
+//            .div(rtracearr.size)
+//
+//        return Result (
+//            lhs, rhs,
+//            lminsim, lavgsim, lmaxsim,
+//            rminsim, ravgsim, rmaxsim
+//        )
     }
 
     data class Result (
         val l: ProjectModel,
         val r: ProjectModel,
-        val lmin: Double,
-        val lavg: Double,
-        val lmax: Double,
-        val rmin: Double,
-        val ravg: Double,
-        val rmax: Double
+        val lsim: Double,
+        val rsim: Double
+//        val lmin: Double,
+//        val lavg: Double,
+//        val lmax: Double,
+//        val rmin: Double,
+//        val ravg: Double,
+//        val rmax: Double
     )
 }
 

@@ -3,6 +3,7 @@ package jcinterpret.testconsole
 import jcinterpret.comparison.iterative.IterativeGraphComparator
 import jcinterpret.core.trace.EntryPointExecutionTraces
 import jcinterpret.document.DocumentUtils
+import jcinterpret.testconsole.utils.ExecutionGraphCondenser
 import jcinterpret.testconsole.utils.TraceModel
 import jcinterpret.testconsole.utils.avg
 import jcinterpret.testconsole.utils.buildTraceModel
@@ -17,6 +18,8 @@ fun main(args: Array<String>) {
     val projects = Files.list(root)
         .filter { Files.isDirectory(it) && !Files.isHidden(it) }
         .use { it.toList() }
+
+    val condenser = ExecutionGraphCondenser(0.9)
 
     for (project in projects) {
         val id = project.fileName.toString()
@@ -37,37 +40,8 @@ fun main(args: Array<String>) {
                 )
             } }
             .map { it.get() }
-            .let { condenseTraces(it) }
+            .let { condenser.condenseTraces(it) }
 
         System.gc()
     }
-}
-
-val T_CONDENSE_THESHOLD = 0.9
-
-fun condenseTraces(traces: List<TraceModel>): List<TraceModel> {
-    println("Condensing ${traces.size} ...")
-
-    val reducedTraces = traces.toMutableList()
-
-    var l = 0
-    while (l < reducedTraces.size) {
-        val lhs = reducedTraces[l]
-        val riter = reducedTraces.iterator()
-
-        while (riter.hasNext()) {
-            val rhs = riter.next()
-
-            if (System.identityHashCode(lhs) != System.identityHashCode(rhs)) {
-                val tsim = IterativeGraphComparator.compare(lhs.ex.graph, rhs.ex.graph)
-                if (tsim.avg() >= T_CONDENSE_THESHOLD)
-                    riter.remove()
-            }
-        }
-
-        l++
-    }
-
-    println("Removed ${traces.size-reducedTraces.size} traces, leaving ${reducedTraces.size}")
-    return reducedTraces
 }

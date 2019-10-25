@@ -16,8 +16,8 @@ import java.util.concurrent.ForkJoinPool
 import java.util.function.Supplier
 
 object IterativeGraphComparator {
-    fun compareAsync(lhs: Graph, rhs: Graph, pool: Executor = ForkJoinPool.commonPool()): CompletableFuture<Pair<Double, Double>> = CompletableFuture.supplyAsync(Supplier<Pair<Double, Double>> { compare(lhs, rhs) }, pool)
-    fun compare(lhs: Graph, rhs: Graph): Pair<Double, Double> {
+    fun compareAsync(lhs: Graph, rhs: Graph, pool: Executor = ForkJoinPool.commonPool()): CompletableFuture<Double> = CompletableFuture.supplyAsync(Supplier<Double> { compare(lhs, rhs) }, pool)
+    fun compare(lhs: Graph, rhs: Graph): Double {
         val comparator = Comparator(lhs, rhs)
         return comparator.compare()
     }
@@ -28,8 +28,7 @@ object IterativeGraphComparator {
 
         private val simMap = makeSimilarityMap()
 
-        fun compare(): Pair<Double, Double> {
-            if (Math.abs(lhs.nodeCount - rhs.nodeCount) > 40) return 0.0 to 0.0
+        fun compare(): Double {
 
             //
             //  Initial Mappings
@@ -95,64 +94,90 @@ object IterativeGraphComparator {
             //  Distance Out Mapping
             //
 
-            while (lastMapped.isNotEmpty()) {
-                val pairs = lastMapped
-                lastMapped = mutableListOf()
+            fun doUpdateLoop() {
+                while (lastMapped.isNotEmpty()) {
+                    val pairs = lastMapped
+                    lastMapped = mutableListOf()
 
-                val sims = mutableMapOf<Node, MutableMap<Node, Double>>()
-                val lkeys = mutableSetOf<Node>()
-                val rkeys = mutableSetOf<Node>()
+                    val sims = mutableMapOf<Node, MutableMap<Node, Double>>()
+                    val lkeys = mutableSetOf<Node>()
+                    val rkeys = mutableSetOf<Node>()
 
-                for ((lnode, rnode) in pairs) {
-                    val ledges = lnode.getEdgeSet<Edge>()
-                    val redges = rnode.getEdgeSet<Edge>()
+                    for ((lnode, rnode) in pairs) {
+                        val ledges = lnode.getEdgeSet<Edge>()
+                        val redges = rnode.getEdgeSet<Edge>()
 
-                    for (ledge in ledges) {
-                        val lop = ledge.getOpposite<Node>(lnode)
-                        if (lMapped.contains(lop.id)) continue
-                        lkeys.add(lop)
+                        for (ledge in ledges) {
+                            val lop = ledge.getOpposite<Node>(lnode)
+                            if (lMapped.contains(lop.id)) continue
+                            lkeys.add(lop)
 
-                        for (redge in redges) {
-                            val rop = redge.getOpposite<Node>(rnode)
-                            if (rMapped.contains(rop.id)) continue
-                            rkeys.add(rop)
+                            for (redge in redges) {
+                                val rop = redge.getOpposite<Node>(rnode)
+                                if (rMapped.contains(rop.id)) continue
+                                rkeys.add(rop)
 
-                            if (ledge.getSourceNode<Node>().id == lnode.id && redge.getSourceNode<Node>().id == rnode.id ||
-                                ledge.getTargetNode<Node>().id == lnode.id && redge.getTargetNode<Node>().id == rnode.id) {
+                                if (ledge.getSourceNode<Node>().id == lnode.id && redge.getSourceNode<Node>().id == rnode.id ||
+                                    ledge.getTargetNode<Node>().id == lnode.id && redge.getTargetNode<Node>().id == rnode.id) {
 
-                                val edgeSim = ElementMatcher.match(ledge, redge).toDouble()
-                                val nodeSim = if (lMapped.contains(lop.id) && rMapped.contains(rop.id)) {
-                                    simMap[lop]!![rop]!!
-                                } else if (lMapped.contains(lop.id) || rMapped.contains(rop.id)) {
-                                    0.0
-                                } else {
-                                    Math.min(ElementMatcher.match(lop, rop), 1).toDouble()
+                                    val edgeSim = ElementMatcher.match(ledge, redge).toDouble()
+                                    val nodeSim = if (lMapped.contains(lop.id) && rMapped.contains(rop.id)) {
+                                        simMap[lop]!![rop]!!
+                                    } else if (lMapped.contains(lop.id) || rMapped.contains(rop.id)) {
+                                        0.0
+                                    } else {
+                                        Math.min(ElementMatcher.match(lop, rop), 1).toDouble()
+                                    }
+
+                                    val sim = Math.min(edgeSim * nodeSim, 1.0) // Bound the sim to 1
+                                    sims.getOrPut(lop) { mutableMapOf() }
+                                        .put(rop, 1.0 - sim)
                                 }
-
-                                val sim = Math.min(edgeSim * nodeSim, 1.0) // Bound the sim to 1
-                                sims.getOrPut(lop) { mutableMapOf() }
-                                    .put(rop, 1.0 - sim)
                             }
                         }
                     }
+
+                    val bestMatches = makeBestMatches(lkeys.toList(), rkeys.toList(), sims)
+                    bestMatches.forEach { (l, r, sim) ->
+                        lMapped.add(l.id)
+                        rMapped.add(r.id)
+
+                        lastMapped.add(l to r)
+                    }
+                }
+            }
+
+            doUpdateLoop()
+
+            val unmappedL = lkeys.filter { !lMapped.contains(it.id) }
+            val unmappedR = rkeys.filter { !rMapped.contains(it.id) }
+
+            if (unmappedL.isNotEmpty() && unmappedR.isNotEmpty()) {
+                val costs = Array(unmappedL.size) { DoubleArray(unmappedR.size) }
+
+
+                for (l in 0 until unmappedL.size) {
+                    val lhs = unmappedL[l]
+                    for (r in 0 until unmappedR.size) {
+                        val rhs = unmappedR[r]
+
+                        costs[l][r] = if (ElementMatcher.match(lhs, rhs) > 0) 0.0 else 1.0
+                    }
                 }
 
-                val bestMatches = makeBestMatches(lkeys.toList(), rkeys.toList(), sims)
-                bestMatches.forEach { (l, r, sim) ->
+                val bestMatches = OptimalAssignmentAlgorithmFactory.execute(unmappedL, unmappedR, costs, 0.7)
+                bestMatches.matches.forEach { (l, r, sim) ->
                     lMapped.add(l.id)
                     rMapped.add(r.id)
 
                     lastMapped.add(l to r)
                 }
+
+                doUpdateLoop()
             }
 
-            val unmappedL = lkeys.filter { !lMapped.contains(it.id) }
-            val unmappedR = rkeys.filter { !rMapped.contains(it.id) }
-
-            val lsim = lMapped.count().toDouble().div(lhs.nodeCount)
-            val rsim = rMapped.count().toDouble().div(rhs.nodeCount)
-
-            return lsim to rsim
+            val sim = (lMapped.size + rMapped.size) / (0.0 + lhs.nodeCount + rhs.nodeCount)
+            return sim
         }
 
         //

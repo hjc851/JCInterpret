@@ -26,19 +26,27 @@ fun main(args: Array<String>) {
             println("Comparing $lid vs $rid")
             val result = ProcessedProjectComparator.compare(lhs, rhs)
 
+//            val (
+//                _lhs, _rhs,
+//                lminsim, lavgsim, lmaxsim,
+//                rminsim, ravgsim, rmaxsim
+//            ) = result
+
+//            println("LMIN:$lminsim")
+//            println("LAVG:$lavgsim")
+//            println("LMAX:$lmaxsim")
+//
+//            println("RMIN:$rminsim")
+//            println("RAVG:$ravgsim")
+//            println("RMAX:$rmaxsim")
+
             val (
                 _lhs, _rhs,
-                lminsim, lavgsim, lmaxsim,
-                rminsim, ravgsim, rmaxsim
+                lsim, rsim
             ) = result
 
-            println("LMIN:$lminsim")
-            println("LAVG:$lavgsim")
-            println("LMAX:$lmaxsim")
-
-            println("RMIN:$rminsim")
-            println("RAVG:$ravgsim")
-            println("RMAX:$rmaxsim")
+            println("LSIM: $lsim")
+            println("RSIM: $rsim")
 
             println()
         }

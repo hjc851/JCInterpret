@@ -3,7 +3,7 @@ package jcinterpret.testconsole.utils
 import jcinterpret.comparison.iterative.IterativeGraphComparator
 import kotlin.streams.toList
 
-class ExecutionTraceCondenser(val threshold: Double) {
+class ExecutionGraphCondenser(val threshold: Double) {
     fun condenseTraces(traces: List<TraceModel>): List<TraceModel> {
         val reducedTraces = traces.toMutableList()
 
@@ -19,7 +19,7 @@ class ExecutionTraceCondenser(val threshold: Double) {
                     if (System.identityHashCode(lhs) != System.identityHashCode(rhs)) return@map null
 
                     val tsim = IterativeGraphComparator.compare(lhs.ex.graph, rhs.ex.graph)
-                    return@map if (tsim.avg() >= threshold) index
+                    return@map if (tsim >= threshold) index
                     else null
                 }.toList()
                 .filterNotNull()

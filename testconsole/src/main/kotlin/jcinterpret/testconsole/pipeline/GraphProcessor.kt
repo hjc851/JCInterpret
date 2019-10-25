@@ -1,14 +1,12 @@
 package jcinterpret.testconsole.pipeline
 
-import com.sun.xml.internal.ws.util.StreamUtils
 import jcinterpret.core.trace.EntryPointExecutionTraces
 import jcinterpret.document.DocumentUtils
 import jcinterpret.graph.analysis.concern.toGraph
-import jcinterpret.testconsole.utils.ExecutionTraceCondenser
+import jcinterpret.testconsole.utils.ExecutionGraphCondenser
 import jcinterpret.testconsole.utils.TraceModelBuilder
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.util.stream.Stream
 import kotlin.streams.toList
 
 fun main(args: Array<String>) {
@@ -20,7 +18,7 @@ fun main(args: Array<String>) {
         .use { it.toList() }
 //        .filter { it.fileName.toString() == "11" }
 
-    val condenser = ExecutionTraceCondenser(0.85)
+    val condenser = ExecutionGraphCondenser(0.85)
 
     projects
         .forEach { project ->
