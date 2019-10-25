@@ -9,9 +9,6 @@ fun main(args: Array<String>) {
     BestMatchFinder.MATCH_THRESHOLD = 0.1
 
     val root = Paths.get(args[0])
-//    val outDir = Paths.get(args[1])
-//
-//    if (!Files.exists(outDir)) Files.createDirectories(outDir)
 
     val projects = Files.list(root)
         .filter { Files.isDirectory(it) && !Files.isHidden(it) }

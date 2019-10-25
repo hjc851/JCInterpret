@@ -81,7 +81,7 @@ data class StackValueStringValue(val value: StackValue): StringValue() {
 @JsonTypeInfo(use= JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")
 data class CompositeStringValue(val lhs: StringValue, val rhs: StringValue): StringValue() {
     override fun label(): String {
-        return lhs.label() + " + " + rhs.label()
+        return "#CS:" + System.identityHashCode(this) // lhs.label() + " + " + rhs.label()
     }
 }
 

@@ -96,7 +96,8 @@ fun main(args: Array<String>) {
     }.toList()
 
     println("Generating Execution Traces")
-    projects.parallelStream().forEach { project ->
+    projects
+        .forEach { project ->
         try {
             println("Executing ${project.id}")
             val result = project.entries.map { entry ->

@@ -38,13 +38,15 @@ import jcinterpret.signature.QualifiedMethodSignature
 import org.graphstream.graph.Edge
 import org.graphstream.graph.Node
 import org.graphstream.graph.implementations.MultiGraph
+import java.lang.IllegalStateException
 import java.util.*
 import kotlin.collections.HashMap
 
 object ExecutionGraphBuilder {
     fun build(title: String, trace: ExecutionTrace): ExecutionGraph {
         val visitor = Visitor(title, trace.heapArea)
-        trace.records.forEach { it.accept(visitor, Unit) }
+        for (record in trace.records)
+            record.accept(visitor, Unit)
         val ex = ExecutionGraph(visitor.graph, trace.heapArea, trace.records.filterIsInstance<TraceRecord.Assertion>())
         return ex
     }
@@ -286,7 +288,12 @@ object ExecutionGraphBuilder {
 
                 is BoxedStringObject -> return nodeFor(obj.value)
 
-                is BoxedStackValueObject -> return nodeFor(obj.value)
+                is BoxedStackValueObject -> {
+                    if (obj.value is ReferenceValue)
+                        throw IllegalStateException()
+
+                    return nodeFor(obj.value)
+                }
 
                 is ClassObject -> {
                     val id = "${ref.id}@"

@@ -35,7 +35,7 @@ data class CastValue (val value: StackValue, override val type: StackType): Comp
 @JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
 data class BinaryOperationValue (val lhs: StackValue, val rhs: StackValue, override val type: StackType, val operator: BinaryOperator): ComputedValue() {
     override fun label(): String {
-        return "${lhs.label()} ${operator.op} ${rhs.label()}"
+        return "" + System.identityHashCode(this)  //"${lhs.label()} ${operator.op} ${rhs.label()}"
     }
 }
 

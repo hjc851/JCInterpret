@@ -11,6 +11,21 @@ object ValueComparator {
         else false
     }
 
+    fun StringValue.collect(list: MutableList<StringValue>, visited: MutableSet<Int>): List<StringValue> {
+        if (this is CompositeStringValue) {
+            if (!visited.contains(System.identityHashCode(this))) {
+                this.lhs.collect(list, visited)
+                this.rhs.collect(list, visited)
+            }
+
+        } else {
+            list.add(this)
+        }
+
+        visited.add(System.identityHashCode(this))
+        return list
+    }
+
     fun compare(lvalue: StringValue, rvalue: StringValue): Boolean {
         if (lvalue is ConcreteStringValue && rvalue is ConcreteStringValue)
             return lvalue.value == rvalue.value
@@ -21,9 +36,22 @@ object ValueComparator {
         if (lvalue is StackValueStringValue && rvalue is StackValueStringValue)
             return compare(lvalue.value, rvalue.value)
 
-        if (lvalue is CompositeStringValue && rvalue is CompositeStringValue)
-            return compare(lvalue.lhs, rvalue.lhs) && compare(lvalue.rhs, lvalue.rhs) ||
-                    compare(lvalue.lhs, rvalue.rhs) && compare(lvalue.rhs, rvalue.lhs)
+        if (lvalue is CompositeStringValue && rvalue is CompositeStringValue) {
+
+            val lcomp = lvalue.collect(mutableListOf(), mutableSetOf())
+            val rcomp = rvalue.collect(mutableListOf(), mutableSetOf())
+
+            if (lcomp.size != rcomp.size) return false
+
+            for (i in 0 until lcomp.size) {
+                val lhs = lcomp[i]
+                val rhs = rcomp[i]
+
+                if (!ValueComparator.compare(lhs, rhs)) return false
+
+                return true
+            }
+        }
 
         return false
     }
@@ -54,7 +82,7 @@ object ValueComparator {
 
         if (lvalue is BinaryOperationValue && rvalue is BinaryOperationValue)
             return lvalue.operator == rvalue.operator &&
-                    (compare(lvalue.lhs, rvalue.lhs) && compare(lvalue.rhs, lvalue.rhs) ||
+                    (compare(lvalue.lhs, rvalue.lhs) && compare(lvalue.rhs, rvalue.rhs) ||
                             compare(lvalue.lhs, rvalue.rhs) && compare(lvalue.rhs, rvalue.lhs))
 
         return false

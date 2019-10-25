@@ -1,5 +1,6 @@
 package jcinterpret.testconsole.pipeline
 
+import com.sun.xml.internal.ws.util.StreamUtils
 import jcinterpret.core.trace.EntryPointExecutionTraces
 import jcinterpret.document.DocumentUtils
 import jcinterpret.graph.analysis.concern.toGraph
@@ -7,6 +8,7 @@ import jcinterpret.testconsole.utils.ExecutionTraceCondenser
 import jcinterpret.testconsole.utils.TraceModelBuilder
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.util.stream.Stream
 import kotlin.streams.toList
 
 fun main(args: Array<String>) {
@@ -16,10 +18,11 @@ fun main(args: Array<String>) {
     val projects = Files.list(root)
         .filter { Files.isDirectory(it) && !Files.isHidden(it) }
         .use { it.toList() }
+//        .filter { it.fileName.toString() == "11" }
 
     val condenser = ExecutionTraceCondenser(0.85)
 
-    projects.parallelStream()
+    projects
         .forEach { project ->
             val id = project.fileName.toString()
 
@@ -35,6 +38,7 @@ fun main(args: Array<String>) {
                 .toList()
 
             entryPointTraces
+//                .drop(2)
                 .forEach { eptraces ->
                     val epsig = eptraces.entryPoint.toString().replace("/", ".")
                         .replace("\"", ".")
@@ -42,17 +46,22 @@ fun main(args: Array<String>) {
                     val epout = pout.resolve(epsig)
                     if (Files.notExists(epout)) Files.createDirectory(epout)
 
-                    println("Building trace models for $epsig")
-                    val models = eptraces.executionTraces
-                        .mapIndexed { index, executionTrace ->
-                            TraceModelBuilder.build(id, index, executionTrace)
+                    println("\tBuilding trace models for $epsig (${eptraces.executionTraces.size} traces)")
+                    val tm = (0 until eptraces.executionTraces.size).toList()
+                        .parallelStream()
+                        .map { index ->
+                            TraceModelBuilder.build(id, index, eptraces.executionTraces[index])
                         }
-                        .let { condenser.condenseTraces(it) }
+                        .toList()
 
-                    println("Writing graphs & data")
+                    println("Condensing ...")
+                    val models = tm.let { condenser.condenseTraces(it) }
+
+                    println("\t\tWriting graphs & data")
                     (0 until models.size).toList()
                         .parallelStream()
                         .forEach { index ->
+                            println("\t\t\t${index+1} of ${models.size}")
                             val traceModel = models[index]
 
                             val eg = traceModel.ex
@@ -70,7 +79,7 @@ fun main(args: Array<String>) {
                             DocumentUtils.writeObject(epout.resolve("$index-assertions.ser"), assertions)
                         }
 
-                    println("Finished writing data")
+                    println("\t\tFinished writing data")
                 }
 
             System.gc()

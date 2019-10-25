@@ -23,7 +23,7 @@ object TaintedSubgraphFinder {
     }
 
     private fun findTaint(start: Node, graph: Graph): NodeTaint {
-        val checked = mutableSetOf<Node>()
+        val checked = mutableSetOf<String>()
         val toCheck = Stack<Node>()
         toCheck.add(start)
 
@@ -31,7 +31,7 @@ object TaintedSubgraphFinder {
         while (toCheck.isNotEmpty()) {
             val node = toCheck.pop()
 
-            if (checked.contains(node))
+            if (checked.contains(node.id))
                 continue
 
             when {
@@ -40,7 +40,7 @@ object TaintedSubgraphFinder {
                         if (edge.isTransformation()) {
                             val opposite = edge.getOpposite<Node>(node)
                             transitions.add(Triple(node, edge, opposite))
-                            if (!checked.contains(opposite)) {
+                            if (!checked.contains(opposite.id)) {
                                 toCheck.push(opposite)
                             }
                         }
@@ -48,7 +48,7 @@ object TaintedSubgraphFinder {
                         if (edge.isAggregation()) {
                             val opposite = edge.getOpposite<Node>(node)
                             transitions.add(Triple(node, edge, opposite))
-                            if (!checked.contains(opposite)) {
+                            if (!checked.contains(opposite.id)) {
                                 toCheck.push(opposite)
                             }
                         }
@@ -56,7 +56,7 @@ object TaintedSubgraphFinder {
                         if (edge.isSupplies()) {
                             val opposite = edge.getOpposite<Node>(node)
                             transitions.add(Triple(node, edge, opposite))
-                            if (!checked.contains(opposite)) {
+                            if (!checked.contains(opposite.id)) {
                                 toCheck.push(opposite)
                             }
                         }
@@ -65,7 +65,7 @@ object TaintedSubgraphFinder {
                             val opposite = edge.getOpposite<Node>(node)
                             transitions.add(Triple(node, edge, opposite))
 
-                            if (!checked.contains(opposite)) {
+                            if (!checked.contains(opposite.id)) {
                                 toCheck.push(opposite)
                             }
                         }
@@ -74,7 +74,7 @@ object TaintedSubgraphFinder {
                             val opposite = edge.getOpposite<Node>(node)
                             transitions.add(Triple(node, edge, opposite))
 
-                            if (!checked.contains(opposite)) {
+                            if (!checked.contains(opposite.id)) {
                                 toCheck.push(opposite)
                             }
                         }
@@ -85,7 +85,7 @@ object TaintedSubgraphFinder {
                             val opposite = edge.getOpposite<Node>(node)
                             transitions.add(Triple(node, edge, opposite))
 
-                            if (!checked.contains(opposite)) {
+                            if (!checked.contains(opposite.id)) {
                                 toCheck.push(opposite)
                             }
                         }
@@ -93,7 +93,7 @@ object TaintedSubgraphFinder {
                         if (edge.isScope()) {
                             val opposite = edge.getOpposite<Node>(node)
                             transitions.add(Triple(node, edge, opposite))
-                            if (!checked.contains(opposite)) {
+                            if (!checked.contains(opposite.id)) {
                                 toCheck.push(opposite)
                             }
                         }
@@ -105,7 +105,7 @@ object TaintedSubgraphFinder {
                         if (edge.isTransformation()) {
                             val opposite = edge.getOpposite<Node>(node)
                             transitions.add(Triple(node, edge, opposite))
-                            if (!checked.contains(opposite)) {
+                            if (!checked.contains(opposite.id)) {
                                 toCheck.push(opposite)
                             }
                         }
@@ -117,7 +117,7 @@ object TaintedSubgraphFinder {
                         if (edge.isSupplies()) {
                             val opposite = edge.getOpposite<Node>(node)
                             transitions.add(Triple(node, edge, opposite))
-                            if (!checked.contains(opposite)) {
+                            if (!checked.contains(opposite.id)) {
                                 toCheck.push(opposite)
                             }
                         }
@@ -125,7 +125,7 @@ object TaintedSubgraphFinder {
                         if (edge.isScope()) {
                             val opposite = edge.getOpposite<Node>(node)
                             transitions.add(Triple(node, edge, opposite))
-                            if (!checked.contains(opposite)) {
+                            if (!checked.contains(opposite.id)) {
                                 toCheck.push(opposite)
                             }
                         }
@@ -133,7 +133,7 @@ object TaintedSubgraphFinder {
                 }
             }
 
-            checked.add(node)
+            checked.add(node.id)
         }
 
         return NodeTaint(start, transitions.toList())

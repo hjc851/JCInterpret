@@ -1,88 +1,72 @@
 package jcinterpret.core.ctx.frame.interpreted
 
 import jcinterpret.core.ctx.ExecutionContext
+import jcinterpret.core.ctx.frame.interpreted.ObjectOperatorUtils.getStringValue
 import jcinterpret.core.memory.heap.*
 import jcinterpret.core.memory.stack.*
 import jcinterpret.core.trace.TraceRecord
 
 object ObjectOperatorUtils {
+
+    fun HeapValue.getStringValue(ctx: ExecutionContext): StringValue {
+        if (this is BoxedStringObject) return this.value
+
+        if (this is BoxedStackValueObject) {
+            val str = this.value.toStringValue()
+
+            ctx.records.add(TraceRecord.Stringification(this.value, str))
+            return str
+        }
+
+        val str = StackValueStringValue(this.ref())
+        ctx.records.add(TraceRecord.Stringification(this.ref(), str))
+        return str
+    }
+
+    fun StackValue.toStringValue(): StringValue {
+        return if (this is ConcreteValue<*>) ConcreteStringValue(this.value.toString())
+        else StackValueStringValue(this)
+    }
+
+    fun add (lhs: StringValue, rhs: StringValue, ctx: ExecutionContext): StackValue {
+        val value = if (lhs is ConcreteStringValue && rhs is ConcreteStringValue) ConcreteStringValue(lhs.value + rhs.value)
+        else CompositeStringValue(lhs, rhs)
+
+        val str = ctx.heapArea.allocateSymbolicString(ctx, value)
+        val ref = str.ref()
+
+        ctx.records.add(TraceRecord.StringConcat(lhs, rhs, value))
+        return ref
+    }
+
     fun add(lhs: StackReference, rhs: StackReference, ctx: ExecutionContext): StackValue {
         val lobj = ctx.heapArea.dereference(lhs)
         val robj = ctx.heapArea.dereference(rhs)
 
-        if (lobj is BoxedStringObject) {
-            val lstr = lobj.value
+        if (lobj is BoxedStringObject || robj is BoxedStringObject) {
+            val lstr = lobj.getStringValue(ctx)
+            val rstr = robj.getStringValue(ctx)
 
-            val rstr = if (robj is BoxedStringObject) {
-                robj.value
-            } else if (robj is BoxedStackValueObject) {
-                StackValueStringValue(robj.value).apply {
-                    ctx.records.add(TraceRecord.Stringification(robj.value, this))
-                }
-            } else {
-                StackValueStringValue(robj.ref()).apply {
-                    ctx.records.add(TraceRecord.Stringification(robj.ref(), this))
-                }
-            }
+            return add(lstr, rstr, ctx)
+        }
 
-            val value = if (lstr is ConcreteStringValue && rstr is ConcreteStringValue)
-                ConcreteStringValue(lstr.value + rstr.value)
-            else if (lstr is ConcreteStringValue && rstr is StackValueStringValue && rstr.value is ConcreteValue<*>)
-                ConcreteStringValue(lstr.value + rstr.value.value)
-            else
-                CompositeStringValue(lstr, rstr)
-
-            val str = ctx.heapArea.allocateSymbolicString(ctx, value)
-            val ref = str.ref()
-
-            ctx.records.add(TraceRecord.StringConcat(lstr, rstr, value))
-//            ctx.records.add(TraceRecord.StackTransformation(lhs, rhs, ref, BinaryOperator.CONCAT))
-
-            return ref
-
-        } else if (lobj is BoxedStackValueObject && robj is BoxedStackValueObject) {
+        if (lobj is BoxedStackValueObject && robj is BoxedStackValueObject) {
             val lvalue = lobj.value
             val rvalue = robj.value
+
             return PrimaryOperationUtils.add(lvalue, rvalue, ctx)
-        } else if (lobj !is BoxedObject<*> && robj is BoxedStringObject) {
-            val lstr = ctx.heapArea.allocateSymbolicStringValue()
-            ctx.records.add(TraceRecord.Stringification(lhs, lstr))
-
-            val rstr = robj.value
-            val value = CompositeStringValue(lstr, rstr)
-
-            ctx.records.add(TraceRecord.StringConcat(lstr, rstr, value))
-
-            val str = ctx.heapArea.allocateSymbolicString(ctx, value)
-            val ref = str.ref()
-            return ref
-
-        } else {
-            TODO()
         }
+
+        TODO()
     }
 
     fun add(lhs: StackReference, rhs: StackValue, ctx: ExecutionContext): StackValue {
         val lobj = ctx.heapArea.dereference(lhs)
 
         if (lobj is BoxedStringObject) {
-
-            val lstr = lobj.value
-            val rstr = StackValueStringValue(rhs)
+            val rstr = rhs.toStringValue()
             ctx.records.add(TraceRecord.Stringification(rhs, rstr))
-
-            val value = if (lstr is ConcreteStringValue && rhs is ConcreteValue<*>)
-                ConcreteStringValue(lstr.value + rhs.value)
-            else
-                CompositeStringValue(lstr, rstr)
-
-            val str = ctx.heapArea.allocateSymbolicString(ctx, value)
-            val ref = str.ref()
-
-            ctx.records.add(TraceRecord.StringConcat(lstr, rstr, value))
-//            ctx.records.add(TraceRecord.StackTransformation(lhs, rhs, ref, BinaryOperator.CONCAT))
-
-            return ref
+            return ObjectOperatorUtils.add(lobj.value, rstr, ctx)
 
         } else if (lobj is BoxedStackValueObject) {
 
@@ -99,28 +83,14 @@ object ObjectOperatorUtils {
         val robj = ctx.heapArea.dereference(rhs)
 
         if (robj is BoxedStringObject) {
-            val lstr = if (lhs is ConcreteValue<*>) ConcreteStringValue(lhs.value.toString())
-            else StackValueStringValue(lhs)
+            val lstr = lhs.toStringValue()
             ctx.records.add(TraceRecord.Stringification(lhs, lstr))
-
-            val rstr = robj.value
-
-            val value = if (lhs is ConcreteValue<*> && rstr is ConcreteStringValue) ConcreteStringValue(lhs.value.toString() + rstr.value)
-            else CompositeStringValue(lstr, rstr)
-
-            val str = ctx.heapArea.allocateSymbolicString(ctx, value)
-            val ref = str.ref()
-
-            ctx.records.add(TraceRecord.StringConcat(lstr, rstr, value))
-//            ctx.records.add(TraceRecord.StackTransformation(lhs, rhs, ref, BinaryOperator.CONCAT))
-
-            return ref
+            return add(lstr, robj.value, ctx)
 
         } else if (robj is BoxedStackValueObject) {
             val rval = robj.value
             return PrimaryOperationUtils.add(lhs, rval, ctx)
         }
-
 
         TODO()
     }
