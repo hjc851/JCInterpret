@@ -8,6 +8,7 @@ include 'signatures'
 include 'testconsole'
 include 'entry'
 include 'graph'
+include 'graph-serialization'
 include 'comparison'
-include 'gs-core'
+include 'GraphStudio'
 

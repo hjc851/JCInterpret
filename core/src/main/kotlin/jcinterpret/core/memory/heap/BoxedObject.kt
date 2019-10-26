@@ -7,8 +7,6 @@ import jcinterpret.core.memory.stack.StackValue
 import jcinterpret.signature.ClassTypeSignature
 import jcinterpret.signature.TypeSignature
 import java.io.Serializable
-import javax.xml.bind.annotation.XmlSeeAlso
-import javax.xml.bind.annotation.XmlType
 
 @JsonSubTypes (
     JsonSubTypes.Type(BoxedStackValueObject::class),

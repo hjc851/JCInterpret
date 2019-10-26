@@ -1,7 +1,6 @@
 package jcinterpret.core.ctx.frame.interpreted
 
 import jcinterpret.core.ctx.ExecutionContext
-import jcinterpret.core.ctx.frame.interpreted.ObjectOperatorUtils.getStringValue
 import jcinterpret.core.memory.heap.*
 import jcinterpret.core.memory.stack.*
 import jcinterpret.core.trace.TraceRecord

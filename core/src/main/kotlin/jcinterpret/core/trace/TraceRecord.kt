@@ -3,7 +3,10 @@ package jcinterpret.core.trace
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import jcinterpret.core.memory.heap.StringValue
-import jcinterpret.core.memory.stack.*
+import jcinterpret.core.memory.stack.BinaryOperator
+import jcinterpret.core.memory.stack.ReferenceValue
+import jcinterpret.core.memory.stack.StackReference
+import jcinterpret.core.memory.stack.StackValue
 import jcinterpret.signature.ClassTypeSignature
 import jcinterpret.signature.QualifiedMethodSignature
 import jcinterpret.signature.TypeSignature

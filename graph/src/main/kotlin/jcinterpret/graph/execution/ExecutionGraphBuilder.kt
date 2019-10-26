@@ -38,7 +38,6 @@ import jcinterpret.signature.QualifiedMethodSignature
 import org.graphstream.graph.Edge
 import org.graphstream.graph.Node
 import org.graphstream.graph.implementations.MultiGraph
-import java.lang.IllegalStateException
 import java.util.*
 import kotlin.collections.HashMap
 

@@ -1,13 +1,5 @@
 package jcinterpret.testconsole.utils
 
-import jcinterpret.comparison.iterative.IterativeGraphComparator
-import jcinterpret.graph.analysis.concern.toGraph
-import java.io.PrintWriter
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ForkJoinPool
-import java.util.concurrent.Semaphore
-import java.util.concurrent.TimeUnit
-
 //object TraceComparator {
 //    fun compare(ltraces: List<TraceModel>, rtraces: List<TraceModel>, logg: PrintWriter) {
 //

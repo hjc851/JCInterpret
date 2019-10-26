@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<AnchorPane prefHeight="600.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="jcinterpret.graphstudio.scene.GraphStudioScene">
+   <children>
+      <VBox layoutX="132.0" layoutY="100.0" prefHeight="200.0" prefWidth="100.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+         <children>
+            <MenuBar fx:id="menubar" maxWidth="1.7976931348623157E308" minWidth="-Infinity" prefHeight="29.0" prefWidth="204.0">
+              <menus>
+                <Menu mnemonicParsing="false" text="Graph Studio">
+                  <items>
+                    <MenuItem mnemonicParsing="false" onAction="#exit" text="Exit" />
+                  </items>
+                </Menu>
+                <Menu mnemonicParsing="false" text="File">
+                  <items>
+                    <MenuItem mnemonicParsing="false" onAction="#open" text="Open ..." />
+                  </items>
+                </Menu>
+              </menus>
+            </MenuBar>
+            <SplitPane dividerPositions="0.3" prefHeight="371.0" prefWidth="600.0" VBox.vgrow="ALWAYS">
+              <items>
+                <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0" SplitPane.resizableWithParent="false" />
+                <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0" />
+              </items>
+            </SplitPane>
+         </children>
+      </VBox>
+   </children>
+</AnchorPane>

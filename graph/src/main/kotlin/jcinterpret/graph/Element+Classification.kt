@@ -1,6 +1,5 @@
 package jcinterpret.graph
 
-import com.sun.org.apache.xpath.internal.operations.Bool
 import jcinterpret.core.memory.heap.StringValue
 import jcinterpret.graph.execution.EdgeType
 import jcinterpret.graph.execution.NodeAttributeKeys.CONCRETE

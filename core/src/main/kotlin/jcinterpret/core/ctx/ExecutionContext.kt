@@ -2,7 +2,10 @@ package jcinterpret.core.ctx
 
 import jcinterpret.core.ExecutionConfig
 import jcinterpret.core.JavaConcolicInterpreter
-import jcinterpret.core.control.*
+import jcinterpret.core.control.ClassAreaFault
+import jcinterpret.core.control.HaltException
+import jcinterpret.core.control.ReturnException
+import jcinterpret.core.control.ThrowException
 import jcinterpret.core.ctx.frame.ExecutionFrame
 import jcinterpret.core.ctx.frame.MethodBoundExecutionFrame
 import jcinterpret.core.ctx.frame.interpreted.*

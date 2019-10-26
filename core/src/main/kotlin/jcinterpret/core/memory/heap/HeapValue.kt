@@ -6,7 +6,6 @@ import jcinterpret.core.memory.stack.StackReference
 import jcinterpret.signature.ClassTypeSignature
 import jcinterpret.signature.ReferenceTypeSignature
 import java.io.Serializable
-import javax.xml.bind.annotation.XmlSeeAlso
 
 @JsonSubTypes (
     JsonSubTypes.Type(ObjectType::class)

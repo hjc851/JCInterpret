@@ -3,7 +3,6 @@ package jcinterpret.core.descriptors
 import jcinterpret.signature.ClassTypeSignature
 import jcinterpret.signature.QualifiedMethodSignature
 import org.eclipse.jdt.core.dom.*
-import java.lang.Exception
 
 class BindingDescriptorResolver (
     compilationUnits: List<CompilationUnit>

@@ -3,6 +3,7 @@ package jcinterpret.testconsole.pipeline
 import jcinterpret.core.trace.EntryPointExecutionTraces
 import jcinterpret.document.DocumentUtils
 import jcinterpret.graph.analysis.concern.toGraph
+import jcinterpret.graph.serialization.toSerializable
 import jcinterpret.testconsole.utils.ExecutionGraphCondenser
 import jcinterpret.testconsole.utils.TraceModelBuilder
 import java.nio.file.Files
@@ -70,11 +71,16 @@ fun main(args: Array<String>) {
                             val heap = eg.heap
                             val assertions = eg.assertions
 
-                            DocumentUtils.writeObject(epout.resolve("$index-execgraph.ser"), executionGraph)
-                            DocumentUtils.writeObject(epout.resolve("$index-taint.ser"), taint.graph)
-                            DocumentUtils.writeObject(epout.resolve("$index-scs.ser"), scs)
+                            val egadapter = executionGraph.toSerializable()
+                            val tgadapter = taint.graph.toSerializable()
+                            val scadapter = scs.toSerializable()
+                            val assertionArray = assertions.toTypedArray()
+
+                            DocumentUtils.writeObject(epout.resolve("$index-execgraph.ser"), egadapter)
+                            DocumentUtils.writeObject(epout.resolve("$index-taint.ser"), tgadapter)
+                            DocumentUtils.writeObject(epout.resolve("$index-scs.ser"), scadapter)
                             DocumentUtils.writeObject(epout.resolve("$index-heap.ser"), heap)
-                            DocumentUtils.writeObject(epout.resolve("$index-assertions.ser"), assertions)
+                            DocumentUtils.writeObject(epout.resolve("$index-assertions.ser"), assertionArray)
                         }
 
                     println("\t\tFinished writing data")

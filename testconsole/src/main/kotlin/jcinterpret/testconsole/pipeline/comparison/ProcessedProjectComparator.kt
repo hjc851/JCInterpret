@@ -2,11 +2,9 @@ package jcinterpret.testconsole.pipeline.comparison
 
 import jcinterpret.comparison.iterative.IterativeGraphComparator
 import jcinterpret.document.DocumentUtils
+import jcinterpret.graph.serialization.GraphSerializationAdapter
+import jcinterpret.graph.serialization.toGraph
 import jcinterpret.testconsole.utils.BestMatchFinder
-import jcinterpret.testconsole.utils.avg
-import jcinterpret.testconsole.utils.max
-import jcinterpret.testconsole.utils.min
-import org.graphstream.graph.Graph
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 
@@ -52,8 +50,8 @@ object ProcessedProjectComparator {
                 val ltaintpath = lcomponents.first { it.fileName.toString() == "${lid}-taint.ser"}
                 val lscpath = lcomponents.first { it.fileName.toString() == "${lid}-scs.ser"}
 
-                val ltaint = DocumentUtils.readObject(ltaintpath, Graph::class)
-                val lscs = DocumentUtils.readObject(lscpath, Graph::class)
+                val ltaint = DocumentUtils.readObject(ltaintpath, GraphSerializationAdapter::class).toGraph()
+                val lscs = DocumentUtils.readObject(lscpath, GraphSerializationAdapter::class).toGraph()
 
                 var rcounter = 0
                 for ((rep, rtraces) in rhs.traces) {
@@ -65,8 +63,8 @@ object ProcessedProjectComparator {
                         val rtaintpath = rcomponents.first { it.fileName.toString() == "${rid}-taint.ser"}
                         val rscpath = rcomponents.first { it.fileName.toString() == "${rid}-scs.ser"}
 
-                        val rtaint = DocumentUtils.readObject(rtaintpath, Graph::class)
-                        val rscs = DocumentUtils.readObject(rscpath, Graph::class)
+                        val rtaint = DocumentUtils.readObject(rtaintpath, GraphSerializationAdapter::class).toGraph()
+                        val rscs = DocumentUtils.readObject(rscpath, GraphSerializationAdapter::class).toGraph()
 
                         val taintsimf = IterativeGraphComparator.compareAsync(ltaint, rtaint)
                         val scsimf = IterativeGraphComparator.compareAsync(lscs, rscs)
@@ -116,10 +114,10 @@ object ProcessedProjectComparator {
         )
 
         val lsim = bestLMatches.map { it.third }
-            .average() ?: 0.0
+            .average()
 
         val rsim = bestRMatches.map { it.third }
-            .average() ?: 0.0
+            .average()
 
         return Result(lhs, rhs, lsim, rsim)
 

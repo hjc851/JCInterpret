@@ -5,7 +5,6 @@ import jcinterpret.signature.QualifiedMethodSignature
 import jcinterpret.signature.TypeSignature
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration
 import org.eclipse.jdt.core.dom.MethodDeclaration
-import org.eclipse.jdt.core.dom.SingleVariableDeclaration
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment
 
 class SourceLibrary (

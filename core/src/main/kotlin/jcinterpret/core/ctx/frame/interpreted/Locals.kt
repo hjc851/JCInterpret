@@ -2,7 +2,6 @@ package jcinterpret.core.ctx.frame.interpreted
 
 import jcinterpret.core.descriptors.TypeDescriptor
 import jcinterpret.core.memory.stack.StackValue
-import jcinterpret.signature.TypeSignature
 import java.util.*
 
 class Locals (

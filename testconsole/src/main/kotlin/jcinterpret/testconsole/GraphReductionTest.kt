@@ -1,12 +1,9 @@
 package jcinterpret.testconsole
 
-import jcinterpret.comparison.iterative.IterativeGraphComparator
 import jcinterpret.core.trace.EntryPointExecutionTraces
 import jcinterpret.document.DocumentUtils
 import jcinterpret.testconsole.utils.ExecutionGraphCondenser
-import jcinterpret.testconsole.utils.TraceModel
-import jcinterpret.testconsole.utils.avg
-import jcinterpret.testconsole.utils.buildTraceModel
+import jcinterpret.testconsole.utils.TraceModelBuilder
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.concurrent.CompletableFuture
@@ -33,7 +30,7 @@ fun main(args: Array<String>) {
             .toList()
             .flatMap { it.executionTraces.toList() }
             .mapIndexed { index, executionTrace -> CompletableFuture.supplyAsync {
-                buildTraceModel(
+                TraceModelBuilder.build(
                     id,
                     index,
                     executionTrace

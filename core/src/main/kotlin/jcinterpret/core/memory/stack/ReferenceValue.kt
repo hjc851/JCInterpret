@@ -2,8 +2,6 @@ package jcinterpret.core.memory.stack
 
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
-import javax.xml.bind.annotation.XmlSeeAlso
-import javax.xml.bind.annotation.XmlType
 
 //
 //  Reference Values

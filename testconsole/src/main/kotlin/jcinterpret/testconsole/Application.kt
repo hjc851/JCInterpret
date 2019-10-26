@@ -1,7 +1,5 @@
 package jcinterpret.testconsole
 
-import jcinterpret.document.ConfigDocument
-import jcinterpret.document.DocumentUtils
 import jcinterpret.core.ExecutionConfig
 import jcinterpret.core.JavaConcolicInterpreterFactory
 import jcinterpret.core.TooManyContextsException
@@ -9,6 +7,8 @@ import jcinterpret.core.control.UnsupportedLanguageFeature
 import jcinterpret.core.descriptors.DescriptorLibraryFactory
 import jcinterpret.core.descriptors.qualifiedSignature
 import jcinterpret.core.source.SourceLibraryFactory
+import jcinterpret.document.ConfigDocument
+import jcinterpret.document.DocumentUtils
 import jcinterpret.entry.EntryPointFinder
 import jcinterpret.parser.Parser
 import jcinterpret.testconsole.utils.FileUtils

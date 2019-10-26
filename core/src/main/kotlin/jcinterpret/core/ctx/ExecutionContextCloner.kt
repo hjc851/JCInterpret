@@ -12,7 +12,6 @@ import jcinterpret.core.memory.stack.StackValue
 import jcinterpret.signature.ArrayTypeSignature
 import jcinterpret.signature.ClassTypeSignature
 import java.util.*
-import java.util.concurrent.atomic.AtomicInteger
 
 object ExecutionContextCloner {
     fun clone(oldCtx: ExecutionContext): ExecutionContext {
