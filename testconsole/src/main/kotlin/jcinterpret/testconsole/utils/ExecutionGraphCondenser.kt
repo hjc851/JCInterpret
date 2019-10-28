@@ -19,8 +19,13 @@ class ExecutionGraphCondenser(val threshold: Double) {
                     if (System.identityHashCode(lhs) == System.identityHashCode(rhs)) return@map null
 
                     val tsim = IterativeGraphComparator.compare(lhs.ex.graph, rhs.ex.graph)
-                    return@map if (tsim >= threshold) index
-                    else null
+
+                    if (tsim >= threshold) {
+                        println("\t\t\tRemoving $index (l=$l)")
+                        return@map index
+                    }
+
+                    return@map null
                 }.toList()
                 .filterNotNull()
 

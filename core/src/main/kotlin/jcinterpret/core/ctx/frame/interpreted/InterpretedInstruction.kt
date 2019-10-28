@@ -1039,12 +1039,29 @@ class foreach_loop(val variable: String, val type: TypeSignature, val body: Stat
             popCount = 6
 
         } else if (collection is ObjectType) { /* Make an assumption that the object is a List */
-            val potenialValues = ctx.records.filterIsInstance<TraceRecord.InstanceLibraryMethodCall>()
+            val potentialValues = ctx.records.filterIsInstance<TraceRecord.InstanceLibraryMethodCall>()
                 .filter { it.scope == ref }
                 .filter { it.method.methodSignature.name.startsWith("add") }
                 .mapNotNull { it.params.lastOrNull() }
+                .toMutableList()
 
-            for (value in potenialValues) {
+            if (potentialValues.isEmpty()) {
+                val value = ctx.heapArea.allocateSymbolic(ctx, type)
+                potentialValues.add(value)
+
+                ctx.records.add(
+                    TraceRecord.InstanceLibraryMethodCall(
+                        QualifiedMethodSignature(ClassTypeSignature.OBJECT,
+                            MethodSignature("add", MethodTypeSignature(arrayOf(ClassTypeSignature.OBJECT), PrimitiveTypeSignature.VOID))
+                        ),
+                        collection.ref(),
+                        arrayOf(value),
+                        null
+                    )
+                )
+            }
+
+            for (value in potentialValues) {
                 instructions.push(block_pop)
                 instructions.push(decode_stmt(body))
                 instructions.push(store(variable, type))

@@ -111,9 +111,9 @@ fun main(args: Array<String>) {
             val projDir = dir.resolve(project.id)
             Files.createDirectory(projDir)
 
-            println("Saving... ${project.id} at ${Date()}")
+            println("\tSaving... ${project.id} at ${Date()}")
             for ((entry, traces) in result) {
-                println("\t${entry.binding.qualifiedSignature()}: ${traces.size} traces")
+                println("\t\t${entry.binding.qualifiedSignature()}: ${traces.size} traces")
 
                 val msig = entry.binding.qualifiedSignature()
                 val fout = projDir.resolve(msig.toString().replace("/", ".") + ".ser")

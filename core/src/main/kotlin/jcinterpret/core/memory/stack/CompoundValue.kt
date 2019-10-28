@@ -37,6 +37,10 @@ data class BinaryOperationValue (val lhs: StackValue, val rhs: StackValue, overr
     override fun label(): String {
         return "" + System.identityHashCode(this)  //"${lhs.label()} ${operator.op} ${rhs.label()}"
     }
+
+    override fun hashCode(): Int {
+        return System.identityHashCode(this)
+    }
 }
 
 interface Operator: Serializable

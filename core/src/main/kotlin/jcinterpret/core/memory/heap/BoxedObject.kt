@@ -81,6 +81,10 @@ data class CompositeStringValue(val lhs: StringValue, val rhs: StringValue): Str
     override fun label(): String {
         return "#CS:" + System.identityHashCode(this) // lhs.label() + " + " + rhs.label()
     }
+
+    override fun hashCode(): Int {
+        return System.identityHashCode(this)
+    }
 }
 
 @JsonTypeInfo(use= JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")

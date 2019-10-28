@@ -62,7 +62,7 @@ object ValueComparator {
 
         if (lvalue is StackReference && rvalue is StackReference) return lvalue.id == rvalue.id
 
-        if (lvalue is SymbolicValue && rvalue is SymbolicValue) return true
+        if (lvalue is SymbolicValue && rvalue is SymbolicValue) return lvalue.type == rvalue.type
 
         if (lvalue is ComputedValue && rvalue is ComputedValue)
             return compare(lvalue, rvalue)

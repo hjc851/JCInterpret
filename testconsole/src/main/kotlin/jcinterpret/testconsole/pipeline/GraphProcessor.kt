@@ -53,14 +53,14 @@ fun main(args: Array<String>) {
                         }
                         .toList()
 
-                    println("Condensing ...")
+                    println("\t\tCondensing models")
                     val models = tm.let { condenser.condenseTraces(it) }
 
-                    println("\t\tWriting graphs & data")
+                    println("\tWriting graphs & data")
                     (0 until models.size).toList()
                         .parallelStream()
                         .forEach { index ->
-                            println("\t\t\t${index+1} of ${models.size}")
+                            println("\t\t${index+1} of ${models.size}")
                             val traceModel = models[index]
 
                             val eg = traceModel.ex
