@@ -76,7 +76,6 @@ fun main(args: Array<String>) {
 
         if (msg.isNotEmpty()) {
             println("Ignoring $id")
-//            msg.forEach { println("\t${it.message}") }
             return@mapNotNull null
         }
 

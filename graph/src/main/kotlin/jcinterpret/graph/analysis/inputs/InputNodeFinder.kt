@@ -1,6 +1,7 @@
 package jcinterpret.graph.analysis.inputs
 
 import jcinterpret.graph.isEntryParameter
+import jcinterpret.graph.isEntryPoint
 import jcinterpret.graph.isSynthetic
 import org.graphstream.graph.Graph
 import org.graphstream.graph.Node

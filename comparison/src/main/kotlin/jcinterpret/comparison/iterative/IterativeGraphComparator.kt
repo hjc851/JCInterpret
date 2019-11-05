@@ -16,19 +16,29 @@ import java.util.concurrent.ForkJoinPool
 import java.util.function.Supplier
 
 object IterativeGraphComparator {
-    fun compareAsync(lhs: Graph, rhs: Graph, pool: Executor = ForkJoinPool.commonPool()): CompletableFuture<Double> = CompletableFuture.supplyAsync(Supplier<Double> { compare(lhs, rhs) }, pool)
-    fun compare(lhs: Graph, rhs: Graph): Double {
+    fun compareAsync(lhs: Graph, rhs: Graph, pool: Executor = ForkJoinPool.commonPool()): CompletableFuture<Result> = CompletableFuture.supplyAsync(Supplier<Result> { compare(lhs, rhs) }, pool)
+    fun compare(lhs: Graph, rhs: Graph): Result {
         val comparator = Comparator(lhs, rhs)
         return comparator.compare()
     }
+
+    class Result (
+        val unionSim: Double,
+        val nodeMappings: List<Pair<Node, Node>>,
+        val lrSim: Double,
+        val rlSim: Double,
+        val lDisjoint: Double,
+        val rDisjoint: Double
+    )
 
     private class Comparator(val lhs: Graph, val rhs: Graph) {
         private val lkeys = lhs.getNodeSet<Node>().toList()
         private val rkeys = rhs.getNodeSet<Node>().toList()
 
         private val simMap = makeSimilarityMap()
+        val nodeMappings = mutableListOf<Pair<Node, Node>>()
 
-        fun compare(): Double {
+        fun compare(): Result {
 
             //
             //  Initial Mappings
@@ -67,9 +77,11 @@ object IterativeGraphComparator {
                             val rhs = candidateEdges[rIndex].getOpposite<Node>(candidate)
                             val sim = 1.0 - sims[lIndex][rIndex]
 
-                            matchedNodes.add(
-                                Triple(lhs, rhs, sim)
-                            )
+                            if (sim > 0) {
+                                matchedNodes.add(
+                                    Triple(lhs, rhs, sim)
+                                )
+                            }
                         }
                     }
 
@@ -86,7 +98,7 @@ object IterativeGraphComparator {
             bestMatches.forEach { (l, r, sim) ->
                 lMapped.add(l.id)
                 rMapped.add(r.id)
-
+                nodeMappings.add(l to r)
                 lastMapped.add(l to r)
             }
 
@@ -141,7 +153,7 @@ object IterativeGraphComparator {
                     bestMatches.forEach { (l, r, sim) ->
                         lMapped.add(l.id)
                         rMapped.add(r.id)
-
+                        nodeMappings.add(l to r)
                         lastMapped.add(l to r)
                     }
                 }
@@ -169,7 +181,7 @@ object IterativeGraphComparator {
                 bestMatches.matches.forEach { (l, r, sim) ->
                     lMapped.add(l.id)
                     rMapped.add(r.id)
-
+                    nodeMappings.add(l to r)
                     lastMapped.add(l to r)
                 }
 
@@ -177,7 +189,19 @@ object IterativeGraphComparator {
             }
 
             val sim = (lMapped.size + rMapped.size) / (0.0 + lhs.nodeCount + rhs.nodeCount)
-            return sim
+
+            val lrSim = lMapped.size / (0.0 + rhs.nodeCount)
+            val rlSim = rMapped.size / (0.0 + lhs.nodeCount)
+
+            val lDisjoint = (lhs.nodeCount - lMapped.size) / (0.0 + lhs.nodeCount)
+            val rDisjoint = (rhs.nodeCount - rMapped.size) / (0.0 + rhs.nodeCount)
+
+            return Result (
+                sim,
+                nodeMappings,
+                lrSim, rlSim,
+                lDisjoint, rDisjoint
+            )
         }
 
         //
@@ -202,9 +226,11 @@ object IterativeGraphComparator {
                     val rhs = rkeys[rIndex]
                     val sim = 1.0 - simArr[lIndex][rIndex]
 
-                    matchedNodes.add(
-                        Triple(lhs, rhs, sim)
-                    )
+                    if (sim > 0.0) {
+                        matchedNodes.add(
+                            Triple(lhs, rhs, sim)
+                        )
+                    }
                 }
             }
 
@@ -227,7 +253,7 @@ object IterativeGraphComparator {
                     val rhs = rkeys[rIndex]
                     val sim = 1.0 - simArr[lIndex][rIndex]
 
-                    if (sim > 0.5) {
+                    if (sim > 0.0) {
                         matchedNodes.add(
                             Triple(lhs, rhs, sim)
                         )

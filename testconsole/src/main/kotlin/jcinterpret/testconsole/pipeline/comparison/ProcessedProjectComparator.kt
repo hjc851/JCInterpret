@@ -1,171 +1,149 @@
 package jcinterpret.testconsole.pipeline.comparison
 
 import jcinterpret.comparison.iterative.IterativeGraphComparator
+import jcinterpret.core.trace.TraceRecord
 import jcinterpret.document.DocumentUtils
 import jcinterpret.graph.serialization.GraphSerializationAdapter
 import jcinterpret.graph.serialization.toGraph
+import jcinterpret.testconsole.pipeline.GraphManifest
 import jcinterpret.testconsole.utils.BestMatchFinder
+import jcinterpret.testconsole.utils.EntryPointTrace
+import jcinterpret.testconsole.utils.ProjectModel
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 
+class NoSecondaryConcernsException: Exception()
+
 object ProcessedProjectComparator {
     fun compare(lhs: ProjectModel, rhs: ProjectModel): Result {
-
-        val lsize = lhs.traces
-            .values
-            .flatMap { it.keys }
-            .size
-
-        val rsize = rhs.traces
-            .values
-            .flatMap { it.keys }
-            .size
-
-//        if (lsize == 0 || rsize == 0)
-//            return Result(lhs, rhs, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-
-        if (lsize == 0 || rsize == 0)
+        // Nothing to compare
+        if (lhs.totalTraceCount == 0 || rhs.totalTraceCount == 0)
             return Result(lhs, rhs, 0.0, 0.0)
 
-//        val minCosts = Array(lsize) { DoubleArray(rsize) }
-//        val maxCosts = Array(lsize) { DoubleArray(rsize) }
-//        val avgCosts = Array(lsize) { DoubleArray(rsize) }
+        // Array of mapping costs (inverse similarities)
+        val costs = Array(lhs.totalTraceCount) { DoubleArray(rhs.totalTraceCount) { 1.0 } }
 
-        val costs = Array(lsize) { DoubleArray(rsize) }
-
-        val permits = lsize * rsize
+        // Number of comparisons - semaphore to wait for comparisons to finish
+        val permits = lhs.totalTraceCount * rhs.totalTraceCount
         val sem = Semaphore(permits)
 
-        var lcounter = 0
+        // Flatten all traces
+        val ltraces = lhs.entryPointTraces.flatMap { it.value }
+        val rtraces = rhs.entryPointTraces.flatMap { it.value }
 
-        val ltracearr = Array(lsize) { "" }
-        val rtracearr = Array(rsize) { "" }
+        // Load the manifests
+        val lmanifests = lhs.manifests
+            .map { it.key to DocumentUtils.readObject(it.value, GraphManifest::class) }
+            .toMap()
 
-        for ((lep, ltraces) in lhs.traces) {
-            for (ltrace in ltraces) {
-                val (lid, lcomponents) = ltrace
-                val lindex = lcounter++
-                ltracearr[lindex] = (lep.fileName.toString() + "-" + lid)
+        val rmanifests = rhs.manifests
+            .map { it.key to DocumentUtils.readObject(it.value, GraphManifest::class) }
+            .toMap()
 
-                val ltaintpath = lcomponents.first { it.fileName.toString() == "${lid}-taint.ser"}
-                val lscpath = lcomponents.first { it.fileName.toString() == "${lid}-scs.ser"}
+        // Do the comparisons
+        for (l in 0 until ltraces.size) {
+            val ltrace = ltraces[l]
 
-                val ltaint = DocumentUtils.readObject(ltaintpath, GraphSerializationAdapter::class).toGraph()
-                val lscs = DocumentUtils.readObject(lscpath, GraphSerializationAdapter::class).toGraph()
+            // Load the left graphs
+            val lexecgraph = DocumentUtils.readObject(ltrace.executionGraphPath, GraphSerializationAdapter::class).toGraph()
+            val ltaint = DocumentUtils.readObject(ltrace.taintGraphPath, GraphSerializationAdapter::class).toGraph()
+            val lscs = DocumentUtils.readObject(ltrace.secondaryConcernGraphPath, GraphSerializationAdapter::class).toGraph()
+//            val lassertions = DocumentUtils.readObject(ltrace.assertionsPath, Array<TraceRecord.Assertion>::class)
 
-                var rcounter = 0
-                for ((rep, rtraces) in rhs.traces) {
-                    for (rtrace in rtraces) {
-                        val (rid, rcomponents) = rtrace
-                        val rindex = rcounter++
-                        rtracearr[rindex] = (rep.fileName.toString() + "-" + rid)
+            for (r in 0 until rtraces.size) {
+                val rtrace = rtraces[r]
 
-                        val rtaintpath = rcomponents.first { it.fileName.toString() == "${rid}-taint.ser"}
-                        val rscpath = rcomponents.first { it.fileName.toString() == "${rid}-scs.ser"}
+                // Load the right graphs
+                val rexecgraph = DocumentUtils.readObject(rtrace.executionGraphPath, GraphSerializationAdapter::class).toGraph()
+                val rtaint = DocumentUtils.readObject(rtrace.taintGraphPath, GraphSerializationAdapter::class).toGraph()
+                val rscs = DocumentUtils.readObject(rtrace.secondaryConcernGraphPath, GraphSerializationAdapter::class).toGraph()
+//                val rassertions = DocumentUtils.readObject(rtrace.assertionsPath, Array<TraceRecord.Assertion>::class)
 
-                        val rtaint = DocumentUtils.readObject(rtaintpath, GraphSerializationAdapter::class).toGraph()
-                        val rscs = DocumentUtils.readObject(rscpath, GraphSerializationAdapter::class).toGraph()
+                // Spin off compare jobs
+                val execsimf = IterativeGraphComparator.compareAsync(lexecgraph, rexecgraph)
+                val taintsimf = IterativeGraphComparator.compareAsync(ltaint, rtaint)
+                val scsimf = IterativeGraphComparator.compareAsync(lscs, rscs)
 
-                        val taintsimf = IterativeGraphComparator.compareAsync(ltaint, rtaint)
-                        val scsimf = IterativeGraphComparator.compareAsync(lscs, rscs)
+                // Acquire permit
+                sem.acquire()
 
-//                        println("Acquiring for $lid vs $rid")
-                        sem.acquire()
+                // Future to join the tasks + handle score aggregation
+                CompletableFuture.allOf(execsimf, taintsimf, scsimf)
+                    .thenRun {
+                        val execsim = execsimf.get()
+                        val taintsim = taintsimf.get()
+                        val scsim = scsimf.get()
 
-                        taintsimf.thenCombine(scsimf) { taintsim, scsim ->
-//                            println("Compared $lid vs $rid graphs")
-                            taintsim to scsim
-                        }.thenAccept { (taintsim, scsim) ->
-                            val sim = (taintsim + scsim) / 2.0
-                            costs[lindex][rindex] = 1.0 - sim
+//                        val sim = (taintsim.unionSim + scsim.unionSim) / 2.0 // (execsim.unionSim + 3*taintsim.unionSim + 2*scsim.unionSim) / 6.0
+//                        val sim = (execsim.unionSim + 3*taintsim.unionSim + 2*scsim.unionSim) / 6.0
 
-//                            val minSim = (taintsim.min() + scsim.min()).div(2)
-//                            val maxSim = (taintsim.max() + scsim.max()).div(2)
-//                            val avgSim = (taintsim.avg() + scsim.avg()).div(2)
-//
-//                            minCosts[lindex][rindex] = 1.0 - minSim
-//                            maxCosts[lindex][rindex] = 1.0 - maxSim
-//                            avgCosts[lindex][rindex] = 1.0 - avgSim
+                        val sim = taintsim.unionSim
+                        costs[l][r] = 1.0 - sim
 
-//                            println("Releasing for $lid vs $rid: ${minSim}; ${avgSim}; ${maxSim};")
-                            sem.release()
-                        }.exceptionally {
-                            println(it.localizedMessage)
-                            sem.release()
-                            return@exceptionally null
-                        }
+                        sem.release()
                     }
-                }
+                    .exceptionally {
+                        println(it.localizedMessage)
+                        sem.release()
+                        return@exceptionally null
+                    }
             }
         }
 
+        // Wait for all the permits to be returned
         do {
-//            println("Waiting on ${permits - sem.availablePermits()} of ${permits} permits ....")
         } while (!sem.tryAcquire(permits, 10, TimeUnit.SECONDS))
-//        println("Acquired ${permits} permits")
 
-        val lids = ltracearr.toList()
-        val rids = rtracearr.toList()
-
+        // Find the best matches
         val (bestLMatches, bestRMatches) = BestMatchFinder.bestMatches(
-            lids,
-            rids,
+            ltraces,
+            rtraces,
             costs
         )
 
-        val lsim = bestLMatches.map { it.third }
-            .average()
+        // Calculate the similarity with weighted aggregation
+        val lsim = aggregateScores(bestLMatches, lmanifests, rmanifests, aggregatingLeft = true)
+        val rsim = aggregateScores(bestRMatches, lmanifests, rmanifests, aggregatingLeft = false)
 
-        val rsim = bestRMatches.map { it.third }
-            .average()
+        if (lsim == 0.0 || rsim == 0.0)
+            Unit
 
         return Result(lhs, rhs, lsim, rsim)
+    }
 
-//        val (bestLMinMatches, bestRMinMatches) = BestMatchFinder.bestMatches(
-//            lids,
-//            rids,
-//            minCosts
-//        )
-//        val (bestLMaxMatches, bestRMaxMatches) = BestMatchFinder.bestMatches(
-//            lids,
-//            rids,
-//            maxCosts
-//        )
-//        val (bestLAvgMatches, bestRAvgmatches) = BestMatchFinder.bestMatches(
-//            lids,
-//            rids,
-//            avgCosts
-//        )
-//
-//        val lminsim = bestLMinMatches.map { it.third }
-//            .sum()
-//            .div(ltracearr.size)
-//
-//        val lmaxsim = bestLMaxMatches.map { it.third }
-//            .sum()
-//            .div(ltracearr.size)
-//
-//        val lavgsim = bestLAvgMatches.map { it.third }
-//            .sum()
-//            .div(ltracearr.size)
-//
-//        val rminsim = bestRMinMatches.map { it.third }
-//            .sum()
-//            .div(rtracearr.size)
-//
-//        val rmaxsim = bestRMaxMatches.map { it.third }
-//            .sum()
-//            .div(rtracearr.size)
-//
-//        val ravgsim = bestRAvgmatches.map { it.third }
-//            .sum()
-//            .div(rtracearr.size)
-//
-//        return Result (
-//            lhs, rhs,
-//            lminsim, lavgsim, lmaxsim,
-//            rminsim, ravgsim, rmaxsim
-//        )
+    private fun aggregateScores (
+        matches: List<Triple<EntryPointTrace, EntryPointTrace, Double>>,
+        lmanifests: Map<String, GraphManifest>,
+        rmanifests: Map<String, GraphManifest>,
+        aggregatingLeft: Boolean
+    ): Double {
+
+        var sum = 0.0
+        var weight = 0
+
+        for ((ltrace, rtrace, sim) in matches) {
+            val lmanifest = lmanifests[ltrace.entryPoint]!!
+            val lweight = lmanifest.graphWeights[ltrace.traceId]!!
+
+            val rmanifest = rmanifests[rtrace.entryPoint]!!
+            val rweight = rmanifest.graphWeights[rtrace.traceId]!!
+
+            if (aggregatingLeft) {
+                sum += sim * lweight
+                weight += lweight
+            } else {
+                sum += sim * rweight
+                weight += rweight
+            }
+        }
+
+        val sim = sum / weight
+        return sim
+
+//        val oldsim = matches.map { it.third }.average()
+//        val lsim = if (bestLMatches.isNotEmpty()) bestLMatches.map { it.third }.average() else 0.0
+//        val rsim = if (bestRMatches.isNotEmpty()) bestRMatches.map { it.third }.average() else 0.0
     }
 
     data class Result (
@@ -173,12 +151,6 @@ object ProcessedProjectComparator {
         val r: ProjectModel,
         val lsim: Double,
         val rsim: Double
-//        val lmin: Double,
-//        val lavg: Double,
-//        val lmax: Double,
-//        val rmin: Double,
-//        val ravg: Double,
-//        val rmax: Double
     )
 }
 

@@ -32,7 +32,8 @@ fun ITypeBinding.signature(): TypeSignature {
 
         this.isGenericType -> {
             val qname = this.qualifiedName
-            val sig = "L${qname.replace(".", "/")};"
+            val bname = this.binaryName
+            val sig = "L${bname.replace(".", "/")};"
             return SignatureParser(sig).parseClassTypeSignature()
         }
 

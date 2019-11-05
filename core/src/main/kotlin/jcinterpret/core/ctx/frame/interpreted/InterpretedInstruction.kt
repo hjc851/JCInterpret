@@ -916,6 +916,9 @@ class cast(val type: TypeSignature): InterpretedInstruction() {
         val value = frame.peek()
         if (type is ReferenceTypeSignature) {
 
+            if (value is StackNil)
+                return
+
             if (value is StackReference) {
                 val obj = ctx.heapArea.dereference(value)
 
@@ -1166,6 +1169,7 @@ class conditional_ternary(val then: Expression, val otherwise: Expression): Inte
                 frame.instructions.push(decode_expr(otherwise))
             }
         } else {
+
             ctx.fork {
                 it.records.add(TraceRecord.Assertion(condition, false))
                 (it.currentFrame as InterpretedExecutionFrame).instructions.push(decode_expr(otherwise))
@@ -1225,6 +1229,7 @@ class conditional_switch(val statements: List<Statement>): InterpretedInstructio
                 }
             }
         } else {
+
             // This thread will execute the default, or skip if none
             for (i in 0 until statements.size) {
                 val statement = statements[i]
@@ -1308,6 +1313,7 @@ class conditional_switch(val statements: List<Statement>): InterpretedInstructio
                 }
             }
         } else {
+
             // This thread will execute the default, or skip if none
             for (i in 0 until statements.size) {
                 val statement = statements[i]

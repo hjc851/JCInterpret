@@ -1,6 +1,8 @@
-package jcinterpret.testconsole.pipeline.comparison
+package jcinterpret.testconsole.pipeline
 
+import jcinterpret.testconsole.pipeline.comparison.ProcessedProjectComparator
 import jcinterpret.testconsole.utils.BestMatchFinder
+import jcinterpret.testconsole.utils.ProjectModelBuilder
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.streams.toList
@@ -13,34 +15,20 @@ fun main(args: Array<String>) {
     val projects = Files.list(root)
         .filter { Files.isDirectory(it) && !Files.isHidden(it) }
         .use { it.toList() }
-        .map(::buildProjectModel)
+        .map(ProjectModelBuilder::build)
 
     val sims = mutableMapOf<String, MutableMap<String, Double>>()
 
     for (l in 0 until projects.size) {
         val lhs = projects[l]
-        val lid = lhs.root.fileName.toString()
+        val lid = lhs.projectId
 
         for (r in l+1 until projects.size) {
             val rhs = projects[r]
-            val rid = rhs.root.fileName.toString()
+            val rid = rhs.projectId
 
             println("Comparing $lid vs $rid")
             val result = ProcessedProjectComparator.compare(lhs, rhs)
-
-//            val (
-//                _lhs, _rhs,
-//                lminsim, lavgsim, lmaxsim,
-//                rminsim, ravgsim, rmaxsim
-//            ) = result
-
-//            println("LMIN:$lminsim")
-//            println("LAVG:$lavgsim")
-//            println("LMAX:$lmaxsim")
-//
-//            println("RMIN:$rminsim")
-//            println("RAVG:$ravgsim")
-//            println("RMAX:$rmaxsim")
 
             val (
                 _lhs, _rhs,
@@ -52,10 +40,6 @@ fun main(args: Array<String>) {
 
             sims.getOrPut(lid) { mutableMapOf() }.put(rid, lsim)
             sims.getOrPut(rid) { mutableMapOf() }.put(lid, rsim)
-
-
-//            println("${lid}\t${rid}\t${String.format("%.2f", lsim)}")
-//            println("${rid}\t${lid}\t${String.format("%.2f", rsim)}")
 
             println()
         }
@@ -72,10 +56,12 @@ fun main(args: Array<String>) {
         for (r in 0 until keys.size) {
             val rkey = keys[r]
 
-            if (scores.containsKey(rkey)) {
+            val id = "$lkey-$rkey"
+            if (l == r) {
+                println("Point3D(\"$id\", $l.0, $r.0, 1.0),")
+            } else if (scores.containsKey(rkey)) {
                 val sim = scores[rkey]!!
 
-                val id = "$lkey-$rkey"
                 println("Point3D(\"$id\", $l.0, $r.0, ${String.format("%.2f", sim)}),")
             }
         }
@@ -83,15 +69,13 @@ fun main(args: Array<String>) {
 
     println()
 
-    val distances = Array(keys.size) { DoubleArray(keys.size) { 1.0 } }
-
-    print("{")
+    print("arrayOf(")
     for (index in 0 until keys.size) {
         print("\"${keys[index]}\"")
         if (index < keys.size-1)
             print(", ")
     }
-    println("}")
+    println(")")
     println()
 
     println("arrayOf(")

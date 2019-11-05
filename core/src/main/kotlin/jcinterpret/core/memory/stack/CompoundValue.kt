@@ -23,6 +23,10 @@ data class NotValue (val value: StackValue): ComputedValue() {
     override fun label(): String {
         return "!${value.label()}"
     }
+
+//    override fun <T, U> accept(visitor: StackValueVisitor<T, U>, arg: T): U {
+//        return visitor.visit(this, arg)
+//    }
 }
 
 @JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
@@ -30,6 +34,10 @@ data class CastValue (val value: StackValue, override val type: StackType): Comp
     override fun label(): String {
         return "(${type.name}) ${value.label()}"
     }
+
+//    override fun <T, U> accept(visitor: StackValueVisitor<T, U>, arg: T): U {
+//        return visitor.visit(this, arg)
+//    }
 }
 
 @JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
@@ -41,6 +49,10 @@ data class BinaryOperationValue (val lhs: StackValue, val rhs: StackValue, overr
     override fun hashCode(): Int {
         return System.identityHashCode(this)
     }
+
+//    override fun <T, U> accept(visitor: StackValueVisitor<T, U>, arg: T): U {
+//        return visitor.visit(this, arg)
+//    }
 }
 
 interface Operator: Serializable

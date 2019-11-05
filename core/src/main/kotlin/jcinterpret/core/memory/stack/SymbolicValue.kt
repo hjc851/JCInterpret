@@ -11,4 +11,8 @@ data class SymbolicValue(val symbol: Int, override val type: StackType): StackVa
     override fun label(): String {
         return "#$symbol ${type.name}"
     }
+
+//    override fun <T, U> accept(visitor: StackValueVisitor<T, U>, arg: T): U {
+//        return visitor.visit(this, arg)
+//    }
 }

@@ -14,13 +14,13 @@ object BestMatchFinder {
         val bestMatchesR = mutableListOf<Triple<T, T, Double>>()
 
         for (l in 0 until ltraces.size) {
-            var highest = 0.0
+            var highest = -0.01
             var highestIndex = -1
 
             for (r in 0 until rtraces.size) {
                 val sim = 1.0 - costs[l][r]
 
-                if (sim > highest && sim > MATCH_THRESHOLD) {
+                if (sim > highest) {// && sim > MATCH_THRESHOLD) {
                     highest = sim
                     highestIndex = r
                 }
@@ -32,13 +32,13 @@ object BestMatchFinder {
         }
 
         for (r in 0 until rtraces.size) {
-            var highest = 0.0
+            var highest = -0.1
             var highestIndex = -1
 
             for (l in 0 until ltraces.size) {
                 val sim = 1.0 - costs[l][r]
 
-                if (sim > highest && sim > MATCH_THRESHOLD) {
+                if (sim > highest) {//  && sim > MATCH_THRESHOLD) {
                     highest = sim
                     highestIndex = l
                 }
@@ -51,5 +51,4 @@ object BestMatchFinder {
 
         return NonexclusiveMatch(bestMatchesL, bestMatchesR)
     }
-
 }

@@ -24,6 +24,10 @@ data class StackReference(override val id: Int): ReferenceValue() {
     override fun label(): String {
         return "@$id"
     }
+
+//    override fun <T, U> accept(visitor: StackValueVisitor<T, U>, arg: T): U {
+//        return visitor.visit(this, arg)
+//    }
 }
 
 @JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
@@ -34,4 +38,8 @@ object StackNil: ReferenceValue() {
     override fun label(): String {
         return "null"
     }
+//
+//    override fun <T, U> accept(visitor: StackValueVisitor<T, U>, arg: T): U {
+//        return visitor.visit(this, arg)
+//    }
 }
