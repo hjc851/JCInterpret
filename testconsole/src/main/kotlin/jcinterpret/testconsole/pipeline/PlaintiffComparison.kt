@@ -19,6 +19,8 @@ fun main(args: Array<String>) {
         .sortedBy { it.fileName.toString() }
         .map(ProjectModelBuilder::build)
 
+    val sims = mutableMapOf<String, Double>()
+
     val lhs = projects.single { it.projectId == plaintiff }
     val defendents = projects.filterNot { it.projectId == plaintiff }
 
@@ -36,21 +38,27 @@ fun main(args: Array<String>) {
         }
 
         println("Comparing $plaintiff vs $rid")
-        try {
-            val result = ProcessedProjectComparator.compare(lhs, rhs)
+        val result = ProcessedProjectComparator.compare(lhs, rhs)
 
-            val (
-                    _lhs, _rhs,
-                    lsim, rsim
-            ) = result
+        val (
+            _lhs, _rhs,
+            lsim, rsim
+        ) = result
 
-            println("LSIM: $lsim")
-            println("RSIM: $rsim")
-        } catch (e: NoSecondaryConcernsException) {
-            println("No secondary concerns")
-        }
+        sims[rid] = (lsim + rsim) / 2.0
+
+        println("LSIM: $lsim")
+        println("RSIM: $rsim")
 
         println()
+    }
+
+    println("Results")
+    val keys = sims.keys.sortedBy { it }
+
+    for (key in keys) {
+        val sim = sims[key]!!
+        println("$key\t$sim")
     }
 }
 
