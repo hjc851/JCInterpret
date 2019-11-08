@@ -19,6 +19,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.CompletableFuture
 import kotlin.streams.toList
 
 fun main(args: Array<String>) {
@@ -98,6 +99,8 @@ fun main(args: Array<String>) {
         )
     }.toList()
 
+    val f = mutableListOf<CompletableFuture<Void>>()
+
     println("Generating Execution Traces")
     projects
         .forEach { project ->
@@ -115,20 +118,24 @@ fun main(args: Array<String>) {
             Files.createDirectory(projDir)
 
             println("\tSaving... ${project.id} at ${Date()}")
-            for ((entry, traces) in result) {
-                println("\t\t${entry.binding.qualifiedSignature()}: ${traces.size} traces")
+            f.add(
+                CompletableFuture.runAsync {
+                    for ((entry, traces) in result) {
+                        println("\t\t${entry.binding.qualifiedSignature()}: ${traces.size} traces")
 
-                val msig = entry.binding.qualifiedSignature()
-                val fout = projDir.resolve(msig.toString().replace("/", ".") + ".ser")
-                Files.createFile(fout)
+                        val msig = entry.binding.qualifiedSignature()
+                        val fout = projDir.resolve(msig.toString().replace("/", ".") + ".ser")
+                        Files.createFile(fout)
 
-                val document = EntryPointExecutionTraces (
-                    msig,
-                    traces.toTypedArray()
-                )
+                        val document = EntryPointExecutionTraces (
+                            msig,
+                            traces.toTypedArray()
+                        )
 
-                DocumentUtils.writeObject(fout, document)
-            }
+                        DocumentUtils.writeObject(fout, document)
+                    }
+                }
+            )
 
         } catch (e: UnsupportedLanguageFeature) {
             println("Removing ${project.id} due to: ${e.msg}")
@@ -138,6 +145,10 @@ fun main(args: Array<String>) {
             System.err.println("Cannot resolve descriptor for type ${e.sig}")
         }
     }
+
+    println("Finishing writing to disk ...")
+    CompletableFuture.allOf(*f.filterNot { it.isDone }.toTypedArray())
+        .get()
 
     println("Finished")
 }
