@@ -1,20 +1,20 @@
 package jcinterpret.testconsole.pipeline
 
 import jcinterpret.testconsole.pipeline.comparison.ProcessedProjectComparator
-import jcinterpret.testconsole.utils.BestMatchFinder
 import jcinterpret.testconsole.utils.ProjectModelBuilder
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.streams.toList
 
 fun main(args: Array<String>) {
-    BestMatchFinder.MATCH_THRESHOLD = 0.1
+    ProcessedProjectComparator.TAINT_MATCH_THRESHOLD = 0.8
 
     val root = Paths.get(args[0])
 
     val projects = Files.list(root)
         .filter { Files.isDirectory(it) && !Files.isHidden(it) }
         .use { it.toList() }
+        .sortedBy { it.fileName.toString() }
         .map(ProjectModelBuilder::build)
 
     val sims = mutableMapOf<String, MutableMap<String, Double>>()
@@ -45,67 +45,84 @@ fun main(args: Array<String>) {
         }
     }
 
-    println()
+    val groupKeys = sims.keys
+        .groupBy { it.split("_")[0] }
 
-    val keys = sims.keys.sorted()
+    for ((lgroupName, lkeySet) in groupKeys) {
+        println(lgroupName)
 
-    for (l in 0 until keys.size) {
-        val lkey = keys[l]
-        val scores = sims[lkey]!!
-
-        for (r in 0 until keys.size) {
-            val rkey = keys[r]
-
-            val id = "$lkey-$rkey"
-            if (l == r) {
-                println("Point3D(\"$id\", $l.0, $r.0, 1.0),")
-            } else if (scores.containsKey(rkey)) {
-                val sim = scores[rkey]!!
-
-                println("Point3D(\"$id\", $l.0, $r.0, ${String.format("%.2f", sim)}),")
-            }
+        for ((rgroupName, rkeyset) in groupKeys) {
+            val avg = lkeySet.map { sims[it]!! }
+                .flatMap { lmap ->
+                    rkeyset.map { rkey -> lmap[rkey] ?: 1.0 }
+                }.average()
+            println("$rgroupName $avg")
         }
-    }
-
-    println()
-
-    print("arrayOf(")
-    for (index in 0 until keys.size) {
-        print("\"${keys[index]}\"")
-        if (index < keys.size-1)
-            print(", ")
-    }
-    println(")")
-    println()
-
-    println("arrayOf(")
-    for (l in 0 until keys.size) {
-        val lkey = keys[l]
-        val scores = sims[lkey]!!
-
-        print("arrayOf(")
-        for (r in 0 until keys.size) {
-            val rkey = keys[r]
-
-            if (l == r) {
-                print("0.00")
-            } else {
-                val sim = scores[rkey]!!
-                print(String.format("%.2f", 1.0 - sim))
-            }
-
-            if (r < keys.size - 1)
-                print(", ")
-        }
-
-        print(")")
-
-        if (l < keys.size - 1)
-            print(",")
 
         println()
     }
-    println(")")
+
+//    println()
+//
+//    val keys = sims.keys.sorted()
+//
+//    for (l in 0 until keys.size) {
+//        val lkey = keys[l]
+//        val scores = sims[lkey]!!
+//
+//        for (r in 0 until keys.size) {
+//            val rkey = keys[r]
+//
+//            val id = "$lkey-$rkey"
+//            if (l == r) {
+//                println("Point3D(\"$id\", $l.0, $r.0, 1.0),")
+//            } else if (scores.containsKey(rkey)) {
+//                val sim = scores[rkey]!!
+//
+//                println("Point3D(\"$id\", $l.0, $r.0, ${String.format("%.2f", sim)}),")
+//            }
+//        }
+//    }
+//
+//    println()
+//
+//    print("val names = arrayOf(")
+//    for (index in 0 until keys.size) {
+//        print("\"${keys[index]}\"")
+//        if (index < keys.size-1)
+//            print(", ")
+//    }
+//    println(")")
+//    println()
+//
+//    println("val distances = arrayOf(")
+//    for (l in 0 until keys.size) {
+//        val lkey = keys[l]
+//        val scores = sims[lkey]!!
+//
+//        print("doubleArrayOf(")
+//        for (r in 0 until keys.size) {
+//            val rkey = keys[r]
+//
+//            if (l == r) {
+//                print("0.00")
+//            } else {
+//                val sim = scores[rkey]!!
+//                print(String.format("%.2f", 1.0 - sim))
+//            }
+//
+//            if (r < keys.size - 1)
+//                print(", ")
+//        }
+//
+//        print(")")
+//
+//        if (l < keys.size - 1)
+//            print(",")
+//
+//        println()
+//    }
+//    println(")")
 
     println()
     println("Finished")

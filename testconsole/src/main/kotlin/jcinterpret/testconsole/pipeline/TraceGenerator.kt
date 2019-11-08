@@ -38,6 +38,7 @@ fun main(args: Array<String>) {
     val root = docPath.parent
     val projectsRoot = root.resolve(document.projectsRoot)
     val output = root.resolve(document.output)
+        .resolve(projectsRoot.fileName.toString())
 
     if (!Files.exists(output))
         Files.createDirectories(output)
@@ -83,6 +84,9 @@ fun main(args: Array<String>) {
         val sourceLibrary = SourceLibraryFactory.build(compilationUnits)
 
         val entries = EntryPointFinder.find(compilationUnits, eps)
+
+        if (entries.isEmpty())
+            Unit
 
         return@mapNotNull Project(
             id,

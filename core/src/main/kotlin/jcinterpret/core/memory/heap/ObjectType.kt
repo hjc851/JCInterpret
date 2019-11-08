@@ -127,7 +127,10 @@ class SymbolicArray (
         val onlyContainsConcreteIndicies = storage.keys
             .firstOrNull { it !is ConcreteValue<*> } == null
 
-        return if (onlyContainsConcreteIndicies) StackInt(storage.size)
-        else size
+        return when {
+            this.storage.isEmpty() -> size
+            onlyContainsConcreteIndicies -> StackInt(storage.size)
+            else -> size
+        }
     }
 }

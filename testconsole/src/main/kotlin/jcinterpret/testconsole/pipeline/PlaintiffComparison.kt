@@ -2,14 +2,13 @@ package jcinterpret.testconsole.pipeline
 
 import jcinterpret.testconsole.pipeline.comparison.NoSecondaryConcernsException
 import jcinterpret.testconsole.pipeline.comparison.ProcessedProjectComparator
-import jcinterpret.testconsole.utils.BestMatchFinder
 import jcinterpret.testconsole.utils.ProjectModelBuilder
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.streams.toList
 
 fun main(args: Array<String>) {
-    BestMatchFinder.MATCH_THRESHOLD = 0.1
+    ProcessedProjectComparator.TAINT_MATCH_THRESHOLD = 0.8
 
     val root = Paths.get(args[0])
     val plaintiff = args[1]
@@ -17,6 +16,7 @@ fun main(args: Array<String>) {
     val projects = Files.list(root)
         .filter { Files.isDirectory(it) && !Files.isHidden(it) }
         .use { it.toList() }
+        .sortedBy { it.fileName.toString() }
         .map(ProjectModelBuilder::build)
 
     val lhs = projects.single { it.projectId == plaintiff }

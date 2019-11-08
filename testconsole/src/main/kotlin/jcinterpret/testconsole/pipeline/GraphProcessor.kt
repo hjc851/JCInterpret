@@ -7,6 +7,7 @@ import jcinterpret.graph.serialization.toSerializable
 import jcinterpret.testconsole.utils.ExecutionGraphCondenser
 import jcinterpret.testconsole.utils.TraceModelBuilder
 import java.io.Serializable
+import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.streams.toList
@@ -30,6 +31,7 @@ fun main(args: Array<String>) {
     val projects = Files.list(root)
         .filter { Files.isDirectory(it) && !Files.isHidden(it) }
         .use { it.toList() }
+        .sortedBy { it.fileName.toString() }
 
     //  Iterate through the projects and process one by one (parallel uses too much memory)
     for (project in projects) {

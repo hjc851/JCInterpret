@@ -16,13 +16,19 @@ import java.util.concurrent.TimeUnit
 class NoSecondaryConcernsException: Exception()
 
 object ProcessedProjectComparator {
+
+    var TAINT_MATCH_THRESHOLD = 0.8
+
     fun compare(lhs: ProjectModel, rhs: ProjectModel): Result {
         // Nothing to compare
         if (lhs.totalTraceCount == 0 || rhs.totalTraceCount == 0)
             return Result(lhs, rhs, 0.0, 0.0)
 
         // Array of mapping costs (inverse similarities)
-        val costs = Array(lhs.totalTraceCount) { DoubleArray(rhs.totalTraceCount) { 1.0 } }
+        val ecosts = Array(lhs.totalTraceCount) { DoubleArray(rhs.totalTraceCount) { 1.0 } }
+        val tcosts = Array(lhs.totalTraceCount) { DoubleArray(rhs.totalTraceCount) { 1.0 } }
+        val scosts = Array(lhs.totalTraceCount) { DoubleArray(rhs.totalTraceCount) { 1.0 } }
+        val acosts = Array(lhs.totalTraceCount) { DoubleArray(rhs.totalTraceCount) { 1.0 } }
 
         // Number of comparisons - semaphore to wait for comparisons to finish
         val permits = lhs.totalTraceCount * rhs.totalTraceCount
@@ -49,7 +55,6 @@ object ProcessedProjectComparator {
             val lexecgraph = DocumentUtils.readObject(ltrace.executionGraphPath, GraphSerializationAdapter::class).toGraph()
             val ltaint = DocumentUtils.readObject(ltrace.taintGraphPath, GraphSerializationAdapter::class).toGraph()
             val lscs = DocumentUtils.readObject(ltrace.secondaryConcernGraphPath, GraphSerializationAdapter::class).toGraph()
-//            val lassertions = DocumentUtils.readObject(ltrace.assertionsPath, Array<TraceRecord.Assertion>::class)
 
             for (r in 0 until rtraces.size) {
                 val rtrace = rtraces[r]
@@ -58,7 +63,6 @@ object ProcessedProjectComparator {
                 val rexecgraph = DocumentUtils.readObject(rtrace.executionGraphPath, GraphSerializationAdapter::class).toGraph()
                 val rtaint = DocumentUtils.readObject(rtrace.taintGraphPath, GraphSerializationAdapter::class).toGraph()
                 val rscs = DocumentUtils.readObject(rtrace.secondaryConcernGraphPath, GraphSerializationAdapter::class).toGraph()
-//                val rassertions = DocumentUtils.readObject(rtrace.assertionsPath, Array<TraceRecord.Assertion>::class)
 
                 // Spin off compare jobs
                 val execsimf = IterativeGraphComparator.compareAsync(lexecgraph, rexecgraph)
@@ -75,11 +79,10 @@ object ProcessedProjectComparator {
                         val taintsim = taintsimf.get()
                         val scsim = scsimf.get()
 
-//                        val sim = (taintsim.unionSim + scsim.unionSim) / 2.0 // (execsim.unionSim + 3*taintsim.unionSim + 2*scsim.unionSim) / 6.0
-//                        val sim = (execsim.unionSim + 3*taintsim.unionSim + 2*scsim.unionSim) / 6.0
-
-                        val sim = taintsim.unionSim
-                        costs[l][r] = 1.0 - sim
+                        ecosts[l][r] = 1.0 - execsim.unionSim
+                        tcosts[l][r] = 1.0 - taintsim.unionSim
+                        scosts[l][r] = 1.0 - scsim.unionSim
+                        acosts[l][r] = 1.0 - ((taintsim.unionSim + scsim.unionSim) / 2.0)
 
                         sem.release()
                     }
@@ -95,25 +98,61 @@ object ProcessedProjectComparator {
         do {
         } while (!sem.tryAcquire(permits, 10, TimeUnit.SECONDS))
 
-        // Find the best matches
-        val (bestLMatches, bestRMatches) = BestMatchFinder.bestMatches(
+//        val (lBestMatches, rBestMatches) = BestMatchFinder.bestMatches(ltraces, rtraces, acosts)
+//
+//        val lsim = aggregateScores(arrayOf(lBestMatches), lmanifests, rmanifests, aggregatingLeft = true)
+//        val rsim = aggregateScores(arrayOf(rBestMatches), lmanifests, rmanifests, aggregatingLeft = false)
+
+        // Find the best matches by the tainted values
+        val (ltaintBestMatches, rtaintBestMatches) = BestMatchFinder.bestMatches (
             ltraces,
             rtraces,
-            costs
-        )
+            tcosts
+        ) { _, _, sim, _ -> sim >= TAINT_MATCH_THRESHOLD }
 
-        // Calculate the similarity with weighted aggregation
-        val lsim = aggregateScores(bestLMatches, lmanifests, rmanifests, aggregatingLeft = true)
-        val rsim = aggregateScores(bestRMatches, lmanifests, rmanifests, aggregatingLeft = false)
+        // Map the taint match scores to their secondary concern scores
+        val lTaintMatchScores = ltaintBestMatches.map { (ltrace, rtrace, score) ->
+            val lindex = ltraces.indexOf(ltrace)
+            val rindex = rtraces.indexOf(rtrace)
+            val scsim = 1.0 - scosts[lindex][rindex]
+            Triple(ltrace, rtrace, scsim)
+        }
 
-        if (lsim == 0.0 || rsim == 0.0)
-            Unit
+        val rTaintMatchScores = rtaintBestMatches.map { (ltrace, rtrace, score) ->
+            val lindex = ltraces.indexOf(ltrace)
+            val rindex = rtraces.indexOf(rtrace)
+            val scsim = 1.0 - scosts[lindex][rindex]
+            Triple(ltrace, rtrace, scsim)
+        }
 
+        // Find the indicies that are excluded for execution graph comparison
+        val lExcludedLIdxs = ltaintBestMatches.map { ltraces.indexOf(it.first) }
+        val lExcludedRIdxs = ltaintBestMatches.map { rtraces.indexOf(it.second) }
+
+        val rExcludedLIdxs = rtaintBestMatches.map { ltraces.indexOf(it.first) }
+        val rExcludedRIdxs = rtaintBestMatches.map { rtraces.indexOf(it.second) }
+
+        // Find the best matches of the remainders by their secondary concerns
+        val (lExecBestMatches, rExecBestMatches) = BestMatchFinder.bestMatches (
+            ltraces, rtraces, acosts
+        ) { lidx, ridx, _, isLeft ->
+            if (isLeft) {
+                !lExcludedLIdxs.contains(lidx) && !lExcludedRIdxs.contains(ridx)
+            } else {
+                !rExcludedLIdxs.contains(lidx) && !rExcludedRIdxs.contains(ridx)
+            }
+        }
+
+        // Aggregate the similarity scores
+        val lsim = aggregateScores(arrayOf(lTaintMatchScores, lExecBestMatches), lmanifests, rmanifests, aggregatingLeft = true)
+        val rsim = aggregateScores(arrayOf(rTaintMatchScores, rExecBestMatches), lmanifests, rmanifests, aggregatingLeft = false)
+
+        // Return result
         return Result(lhs, rhs, lsim, rsim)
     }
 
     private fun aggregateScores (
-        matches: List<Triple<EntryPointTrace, EntryPointTrace, Double>>,
+        matchSets: Array<List<Triple<EntryPointTrace, EntryPointTrace, Double>>>,
         lmanifests: Map<String, GraphManifest>,
         rmanifests: Map<String, GraphManifest>,
         aggregatingLeft: Boolean
@@ -122,28 +161,26 @@ object ProcessedProjectComparator {
         var sum = 0.0
         var weight = 0
 
-        for ((ltrace, rtrace, sim) in matches) {
-            val lmanifest = lmanifests[ltrace.entryPoint]!!
-            val lweight = lmanifest.graphWeights[ltrace.traceId]!!
+        for (matches in matchSets) {
+            for ((ltrace, rtrace, sim) in matches) {
+                val lmanifest = lmanifests[ltrace.entryPoint]!!
+                val lweight = lmanifest.graphWeights[ltrace.traceId]!!
 
-            val rmanifest = rmanifests[rtrace.entryPoint]!!
-            val rweight = rmanifest.graphWeights[rtrace.traceId]!!
+                val rmanifest = rmanifests[rtrace.entryPoint]!!
+                val rweight = rmanifest.graphWeights[rtrace.traceId]!!
 
-            if (aggregatingLeft) {
-                sum += sim * lweight
-                weight += lweight
-            } else {
-                sum += sim * rweight
-                weight += rweight
+                if (aggregatingLeft) {
+                    sum += sim * lweight
+                    weight += lweight
+                } else {
+                    sum += sim * rweight
+                    weight += rweight
+                }
             }
         }
 
         val sim = sum / weight
         return sim
-
-//        val oldsim = matches.map { it.third }.average()
-//        val lsim = if (bestLMatches.isNotEmpty()) bestLMatches.map { it.third }.average() else 0.0
-//        val rsim = if (bestRMatches.isNotEmpty()) bestRMatches.map { it.third }.average() else 0.0
     }
 
     data class Result (
