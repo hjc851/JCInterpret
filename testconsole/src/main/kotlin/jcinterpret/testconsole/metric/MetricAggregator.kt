@@ -35,6 +35,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
+import java.util.stream.IntStream
 import kotlin.streams.toList
 
 fun main(args: Array<String>) {
@@ -44,7 +45,10 @@ fun main(args: Array<String>) {
     val out = Paths.get(args[3])
     Files.createDirectories(out)
 
+    println("Trace & Branching Features")
     val (cf, tr) = traceFeatures(traceRoot)
+
+    println("Graph Features")
     val gf = graphFeatures(graphRoot)
 
     val model = ProjectFeatureModel(title, cf, tr, gf)
@@ -54,15 +58,16 @@ fun main(args: Array<String>) {
 
 fun traceFeatures(root: Path): Pair<Map<String, Map<String, Map<FeatureType, List<Feature<*>>>>>, Map<String, Map<String, List<Map<FeatureType, List<Feature<*>>>>>>> {
     val branchFeatures = mutableMapOf<String, MutableMap<String, Map<FeatureType, List<Feature<*>>>>>()
-    val traceFeatures = mutableMapOf<String, MutableMap<String, MutableList<Map<FeatureType, List<Feature<*>>>>>>()
+    val traceFeatures = mutableMapOf<String, MutableMap<String, List<Map<FeatureType, List<Feature<*>>>>>>()
 
     val projects = Files.list(root)
         .filter { Files.isDirectory(it) && !Files.isHidden(it) }
         .use { it.toList() }
         .sortedBy { it.fileName.toString() }
 
-    for (project in projects) {
+    projects.forEach { project ->
         val id = project.fileName.toString()
+        println("\tProject $id")
         val traceSetFiles = Files.list(project)
             .filter { !Files.isDirectory(it) && !Files.isHidden(it) && it.fileName.toString().endsWith(".ser")}
             .use { it.toList() }
@@ -72,21 +77,27 @@ fun traceFeatures(root: Path): Pair<Map<String, Map<String, Map<FeatureType, Lis
             val epsig = eptraces.entryPoint.toString().replace("/", ".")
                 .replace("\"", ".")
 
+            println("\t\tAnalysing $epsig ...")
             if (eptraces.executionTraces.isEmpty()) continue
 
+            println("\t\t\tExtracting Branching Features ...")
             val records = eptraces.executionTraces.map { it.records }
             val cgraph = ConditionalGraphBuilder.build(records)
             val cfeatures = extractConditionalGraphFeatures(cgraph)
             branchFeatures.getOrPut(id) { mutableMapOf() }
                 .put(epsig, cfeatures)
 
-            eptraces.executionTraces.forEachIndexed { index, trace ->
-                val tf = extractTraceFeatures(trace)
+            println("\t\t\tExtracting Trace Features ...")
+            val size = eptraces.executionTraces.size
 
-                traceFeatures.getOrPut(id) { mutableMapOf() }
-                    .getOrPut(epsig) { mutableListOf() }
-                    .add(tf)
-            }
+            val features = IntStream.range(0, eptraces.executionTraces.size).parallel().mapToObj { index ->
+                println("\t\t\t\t${index+1} of $size")
+                val trace = eptraces.executionTraces[index]
+                return@mapToObj extractTraceFeatures(trace)
+            }.toList()
+
+            traceFeatures.getOrPut(id) { mutableMapOf() }
+                .put(epsig, features)
         }
     }
 
@@ -445,6 +456,7 @@ fun graphFeatures(root: Path): Map<String, Map<String, List<Map<FeatureType, Lis
 
     for (project in projects) {
         val id = project.fileName.toString()
+        println("\t$id")
 
         val entryPoints = Files.list(project)
             .filter { Files.isDirectory(it) || !Files.isHidden(it) }
@@ -452,7 +464,7 @@ fun graphFeatures(root: Path): Map<String, Map<String, List<Map<FeatureType, Lis
 
         for (entryPoint in entryPoints) {
             val epsig = entryPoint.fileName.toString()
-
+            println("\t\tAnalysing $epsig ...")
             val files = Files.list(entryPoint)
                 .filter { Files.isRegularFile(it) && !Files.isHidden(it) }
                 .use { it.toList() }
@@ -461,6 +473,7 @@ fun graphFeatures(root: Path): Map<String, Map<String, List<Map<FeatureType, Lis
             val traceCount = (files.count() - 1) / 5
 
             for (i in 0 until traceCount) {
+                println("\t\t\t${i+1} of $traceCount")
                 val execgraph = DocumentUtils.readObject(entryPoint.resolve("$i-execgraph.ser"), GraphSerializationAdapter::class).toGraph()
                 val taint = DocumentUtils.readObject(entryPoint.resolve("$i-taint.ser"), GraphSerializationAdapter::class).toGraph()
                 val scs = DocumentUtils.readObject(entryPoint.resolve("$i-scs.ser"), GraphSerializationAdapter::class).toGraph()
@@ -506,7 +519,7 @@ private fun extractGraphAttributes(graph: Graph, prefix: String): List<Feature<*
         .map { NumericFeature("GRAPH_${prefix}_OPERATOR_${it.key}_COUNT", it.value.count()) }
 
     val byCastType = nodes.filter { it.hasAttribute(CASTTYPE) }
-        .groupBy { it.getAttribute<TypeSignature>(CASTTYPE) }
+        .groupBy { it.getAttribute<StackType>(CASTTYPE) }
         .map { NumericFeature("GRAPH_${prefix}_CASTTYPE_${it.key}_COUNT", it.value.count()) }
 
     val byQualifiedMethodSignature = nodes.filter { it.hasAttribute(METHODSIGNATURE) }

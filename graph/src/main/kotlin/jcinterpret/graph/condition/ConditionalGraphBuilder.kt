@@ -40,8 +40,12 @@ object ConditionalGraphBuilder {
             return node
 
         } else {
-            val remainingRecords = if (lastForkIndex == 0) first.subList(0, first.size-1)
-            else first.subList(lastForkIndex+1, first.size-1)
+            val startIndex = if (lastForkIndex == 0) 0
+            else if (lastForkIndex+1 > first.size-1) first.size-1
+            else lastForkIndex+1
+            val endIndex = first.size-1
+
+            val remainingRecords = first.subList(startIndex, endIndex)
 
             val last = remainingRecords.lastOrNull()
 
