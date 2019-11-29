@@ -37,59 +37,6 @@ import java.nio.file.Paths
 import java.util.*
 import kotlin.streams.toList
 
-enum class FeatureType {
-    //  Trace Records
-    HEAP,
-    EXEC_ENV_INTERACTION,
-    ENTRYPOINT,
-    FIELDS,
-    ARRAYS,
-    STACK_TRANSFORMS,
-    STRING_TRANSFORM,
-    ASSERTIONS,
-    HALTS,
-    UNCAUGHT_EXCEPTIONS,
-
-    //  Conditional Graph
-    CONDITIONAL_GRAPH,
-
-    // Graph
-    EXECUTION_GRAPH,
-    TAINT_GRAPH,
-    CONCERN_GRAPH
-}
-
-abstract class Feature<T>(
-    val name: String,
-    val value: T
-): Serializable
-
-enum class Bool {
-    TRUE,
-    FALSE
-}
-
-class NumericFeature(name: String, value: Number): Feature<Number>(name, value)
-class StringFeature(name: String, value: String): Feature<String>(name, value)
-class DateFeature(name: String, value: Date): Feature<Date>(name, value)
-
-class EnumeratedFeature<T: Enum<T>>(name: String, value: Enum<T>): Feature<Enum<T>>(name, value)
-class RelationalFeature(name: String, value: Array<Feature<*>>): Feature<Array<Feature<*>>>(name, value)
-
-//data class Feature (
-//    val name: String,
-//    val value: Double
-//) {
-//    constructor(name: String, value: Int): this(name, value.toDouble())
-//}
-
-data class ProjectFeatureModel (
-    val title: String,
-    val conditionalFeatures: Map<String, Map<String, Map<FeatureType, List<Feature<*>>>>>,
-    val traceFeatures: Map<String, Map<String, List<Map<FeatureType, List<Feature<*>>>>>>,
-    val graphFeatures: Map<String, Map<String, List<Map<FeatureType, List<Feature<*>>>>>>
-): Serializable
-
 fun main(args: Array<String>) {
     val title = args[0]
     val traceRoot = Paths.get(args[1])
