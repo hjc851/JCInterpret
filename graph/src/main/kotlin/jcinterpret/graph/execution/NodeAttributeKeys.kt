@@ -7,21 +7,21 @@ object NodeAttributeKeys {
     val UILABEL = "ui.label"
 
     val TYPE = "type"
-    val LITERAL = "literal"
     val EDGETYPE = "edgetype"
     val NODETYPE = "nodetype"
     val OPERATOR = "operator"
     val CASTTYPE = "casttype"
     val METHODSIGNATURE = "methodsignature"
-
     val VALUE = "value"
     val STRING = "string"
+    val REPRESENTING = "representing"
+
     val STATIC = "static"
+    val LITERAL = "literal"
     val SYMBOLIC = "symbolic"
     val CONCRETE = "concrete"
     val SYNTHETIC = "synthetic"
     val STATICFIELD = "staticfield"
-    val REPRESENTING = "representing"
     val ENTRYPARAMETER = "entryparameter"
 
     val CLASS_VALUE = "value"

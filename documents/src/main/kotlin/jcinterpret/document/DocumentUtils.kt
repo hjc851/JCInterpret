@@ -18,11 +18,11 @@ object DocumentUtils {
         configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
     }
 
-    fun <T: Any> read(path: Path, type: KClass<T>): T {
+    fun <T: Any> readJson(path: Path, type: KClass<T>): T {
         return jsonMapper.readValue(path.toFile(), type.java)
     }
 
-    fun <T: Any> write(path: Path, document: T) {
+    fun <T: Any> writeJson(path: Path, document: T) {
         jsonMapper.writeValue(path.toFile(), document)
     }
 

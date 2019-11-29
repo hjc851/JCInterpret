@@ -26,7 +26,7 @@ fun main(args: Array<String>) {
     if (!Files.exists(docPath) || !Files.isRegularFile(docPath))
         error("The passed argument is not a path to a file")
 
-    val document = DocumentUtils.read(docPath, ConfigDocument::class)
+    val document = DocumentUtils.readJson(docPath, ConfigDocument::class)
     ExecutionConfig.loggingEnabled = document.loggingEnabled
     ExecutionConfig.maxLoopExecutions = document.maxLoopExecutions
     ExecutionConfig.maxRecursiveCalls = document.maxRecursiveCalls

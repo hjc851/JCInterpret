@@ -1217,13 +1217,35 @@ class conditional_switch(val statements: List<Statement>): InterpretedInstructio
                             .forEach { frame.instructions.push(decode_stmt(it)) }
 
                     } else {
-                        val expr = statement.expression as StringLiteral
-                        val match = value.value == expr.literalValue
 
-                        if (match) {
-                            statements.subList(i+1, statements.size-1)
-                                .reversed()
-                                .forEach { frame.instructions.push(decode_stmt(it)) }
+                        if (statement.expression is SimpleName) {
+                            val expr = statement.expression as SimpleName
+                            val binding = expr.resolveBinding() as IVariableBinding
+
+                            val dcls = ctx.classArea.getClass(binding.declaringClass.signature() as ClassTypeSignature)
+                            val field = dcls.staticFields[binding.name]!!
+                            val fval = field.value as StackReference
+                            val strobj = ctx.heapArea.dereference(fval) as BoxedStringObject
+
+                            val strval = strobj.value as ConcreteStringValue
+                            val str = strval.value
+
+                            val match = value.value == str
+                            if (match) {
+                                statements.subList(i+1, statements.size-1)
+                                    .reversed()
+                                    .forEach { frame.instructions.push(decode_stmt(it)) }
+                            }
+
+                        } else {
+                            val expr = statement.expression as StringLiteral
+                            val match = value.value == expr.literalValue
+
+                            if (match) {
+                                statements.subList(i+1, statements.size-1)
+                                    .reversed()
+                                    .forEach { frame.instructions.push(decode_stmt(it)) }
+                            }
                         }
                     }
                 }
