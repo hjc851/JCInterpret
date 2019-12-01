@@ -1,4 +1,4 @@
-package jcinterpret.testconsole.metric
+package jcinterpret.testconsole.features
 
 enum class FeatureType {
     //  Trace Records

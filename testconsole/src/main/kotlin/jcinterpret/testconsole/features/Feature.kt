@@ -1,4 +1,4 @@
-package jcinterpret.testconsole.metric
+package jcinterpret.testconsole.features
 
 import java.io.Serializable
 import java.util.*
