@@ -27,6 +27,7 @@ import org.graphstream.graph.Edge
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.HashMap
+import java.util.concurrent.CompletableFuture
 import java.util.stream.IntStream
 import kotlin.streams.toList
 
@@ -65,19 +66,25 @@ object GraphFeatureExtractor {
                     val traceCount = (files.count() - 1) / 5
 
                     IntStream.range(0, traceCount)
-                        .parallel()
                         .forEach { i ->
                             // Extract the features
                             val features = mutableMapOf<FeatureType, List<Feature<*>>>()
 
-                            val execgraph = DocumentUtils.readObject(entryPoint.resolve("$i-execgraph.ser"), GraphSerializationAdapter::class).toGraph()
-                            features[FeatureType.EXECUTION_GRAPH] = extractGraphAttributes(execgraph, "EXEC")
+                            val execFeatureFuture = CompletableFuture.supplyAsync { DocumentUtils.readObject(entryPoint.resolve("$i-execgraph.ser"), GraphSerializationAdapter::class).toGraph() }
+                                .thenApply { extractGraphAttributes(it, "EXEC") }
 
-                            val taint = DocumentUtils.readObject(entryPoint.resolve("$i-taint.ser"), GraphSerializationAdapter::class).toGraph()
-                            features[FeatureType.TAINT_GRAPH] = extractGraphAttributes(taint, "TAINT")
+                            val taintFeatureFuture = CompletableFuture.supplyAsync { DocumentUtils.readObject(entryPoint.resolve("$i-taint.ser"), GraphSerializationAdapter::class).toGraph() }
+                                .thenApply { extractGraphAttributes(it, "TAINT") }
 
-                            val scs = DocumentUtils.readObject(entryPoint.resolve("$i-scs.ser"), GraphSerializationAdapter::class).toGraph()
-                            features[FeatureType.CONCERN_GRAPH] = extractGraphAttributes(scs, "SCS")
+                            val scsFeatureFuture = CompletableFuture.supplyAsync { DocumentUtils.readObject(entryPoint.resolve("$i-scs.ser"), GraphSerializationAdapter::class).toGraph() }
+                                .thenApply { extractGraphAttributes(it, "SCS") }
+
+                            features[FeatureType.EXECUTION_GRAPH] = execFeatureFuture.get()
+                            features[FeatureType.TAINT_GRAPH] = taintFeatureFuture.get()
+                            features[FeatureType.CONCERN_GRAPH] = scsFeatureFuture.get()
+
+                            // Force GC
+                            System.gc()
 
                             // Save to disk
                             val fout = projOut.resolve("${epsig}-$i.ser")
