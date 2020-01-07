@@ -5,9 +5,12 @@ import jcinterpret.testconsole.pipeline.comparison.ProcessedProjectComparator
 import jcinterpret.testconsole.utils.ProjectModelBuilder
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.time.Duration
+import java.time.Instant
 import kotlin.streams.toList
 
 fun main(args: Array<String>) {
+    val start = Instant.now()
     ProcessedProjectComparator.TAINT_MATCH_THRESHOLD = 0.8
 
     val root = Paths.get(args[0])
@@ -60,6 +63,12 @@ fun main(args: Array<String>) {
         val sim = sims[key]!!
         println("$key\t$sim")
     }
+
+    val end = Instant.now()
+    val elapsed = Duration.between(start, end)
+
+    println()
+    println("Elapsed time ${elapsed.seconds} (s)")
 }
 
 

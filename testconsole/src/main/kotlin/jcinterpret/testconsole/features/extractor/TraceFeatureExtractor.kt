@@ -1,20 +1,21 @@
 package jcinterpret.testconsole.features.extractor
 
-import jcinterpret.core.memory.stack.*
-import jcinterpret.core.memory.heap.*
+import jcinterpret.core.memory.stack.StackType
 import jcinterpret.core.trace.EntryPointExecutionTraces
 import jcinterpret.core.trace.ExecutionTrace
 import jcinterpret.core.trace.TraceRecord
 import jcinterpret.document.DocumentUtils
-import jcinterpret.testconsole.features.*
+import jcinterpret.testconsole.features.featureset.*
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.*
 import java.util.stream.IntStream
 import kotlin.streams.toList
 
 object TraceFeatureExtractor {
-    fun extract(root: Path, outRoot: Path) {
+
+    val boolDescriptor = Bool.descriptor
+
+    fun extract(root: Path, fs: FeatureSet) {
         // List the projects
         val projects = Files.list(root)
             .filter { Files.isDirectory(it) && !Files.isHidden(it) }
@@ -22,42 +23,48 @@ object TraceFeatureExtractor {
             .sortedBy { it.fileName.toString() }
 
         // Iterate through the projects + process
-        projects.parallelStream()
-            .forEach { project ->
-                val id = project.fileName.toString()
+        projects.forEachIndexed { index, project ->
+            val id = project.fileName.toString()
+            val pfs = fs.getFeatureSet(id)
+            println("\t$id - ${index + 1} of ${projects.count()}")
 
-                // Out root for this project
-                val projOut = outRoot.resolve(id)
-                Files.createDirectory(projOut)
+            val traceSetFiles = Files.list(project)
+                .filter { !Files.isDirectory(it) && !Files.isHidden(it) && it.fileName.toString().endsWith(".ser") }
+                .use { it.toList() }
 
-                // Trace sets for this project
-                val traceSetFiles = Files.list(project)
-                    .filter { !Files.isDirectory(it) && !Files.isHidden(it) && it.fileName.toString().endsWith(".ser")}
-                    .use { it.toList() }
+            traceSetFiles.forEach { traceSetPath ->
+                val eptraces = DocumentUtils.readObject(traceSetPath, EntryPointExecutionTraces::class)
+                val epsig = eptraces.entryPoint.toString().replace("/", ".")
+                    .replace("\"", ".")
 
-                // Process the traces
-                traceSetFiles
-                    .forEach { traceSetPath ->
-                        val eptraces = DocumentUtils.readObject(traceSetPath, EntryPointExecutionTraces::class)
-                        val epsig = eptraces.entryPoint.toString().replace("/", ".")
-                            .replace("\"", ".")
+                IntStream.range(0, eptraces.executionTraces.size)
+                    .parallel()
+                    .forEach { index ->
+                        // Extract the features
+                        val trace = eptraces.executionTraces[index]
+                        val features = featuresForTrace(trace)
 
-                        IntStream.range(0, eptraces.executionTraces.size)
-                            .parallel()
-                            .forEach { index ->
-                                // Extract the features
-                                val trace = eptraces.executionTraces[index]
-                                val features = extractTraceFeatures(trace)
-
-                                // Save to disk
-                                val fout = projOut.resolve("${epsig}-$index.ser")
-                                DocumentUtils.writeObject(fout, HashMap(features))
-                            }
                     }
+
+                TODO("DO THE FEATURES")
             }
+        }
     }
 
-    fun extractTraceFeatures(trace: ExecutionTrace): Map<FeatureType, List<Feature<*>>> {
+    enum class FeatureType {
+        ENTRYPOINT,
+        HEAP,
+        EXEC_ENV_INTERACTION,
+        FIELDS,
+        ARRAYS,
+        STACK_TRANSFORMS,
+        STRING_TRANSFORM,
+        ASSERTIONS,
+        HALTS,
+        UNCAUGHT_EXCEPTIONS
+    }
+
+    fun featuresForTrace(trace: ExecutionTrace): Map<FeatureType, List<Feature<*>>> {
         val heap = trace.heapArea
         val records = trace.records
 
@@ -73,22 +80,20 @@ object TraceFeatureExtractor {
             StringFeature("ENTRYPOINT_QUALIFIED_NAME", em.sig.toString()),
             StringFeature("ENTRYPOINT_SIGNATURE_NAME", em.sig.methodSignature.toString()),
 
-            EnumeratedFeature("ENTRYPOINT_QUALIFIED_${em.sig}", Bool.TRUE),
-            EnumeratedFeature("ENTRYPOINT_SIGNATURE_${em.sig.methodSignature}", Bool.TRUE),
+            EnumFeature("ENTRYPOINT_QUALIFIED_${em.sig}", Bool.TRUE, boolDescriptor),
+            EnumFeature("ENTRYPOINT_SIGNATURE_${em.sig.methodSignature}", Bool.TRUE, boolDescriptor),
 
-            EnumeratedFeature("ENTRYPOINT_SCOPE_PRESENT", if (es != null) Bool.TRUE else Bool.FALSE),
-            EnumeratedFeature("ENTRYPOINT_SCOPE_TYPE${est?.type ?: "NONE"}", Bool.TRUE),
+            EnumFeature("ENTRYPOINT_SCOPE_PRESENT", if (es != null) Bool.TRUE else Bool.FALSE, boolDescriptor),
+            EnumFeature("ENTRYPOINT_SCOPE_TYPE${est?.type ?: "NONE"}", Bool.TRUE, boolDescriptor),
 
             NumericFeature("ENTRYPOINT_PARAMETER_COUNT", epars.count()),
 
-            RelationalFeature("ENTRYPOINT_PARAMETER_STACKTYPES",
-                {
-                    val epargroups = epars.groupBy { it.ref.type }
-                    StackType.values().map {
-                        NumericFeature("ENTRYPOINT_PARAMETER_STACKTYPE_${it.name}_COUNT", epargroups[it]?.count() ?: 0)
-                    }
-                }().toTypedArray()
-            ),
+            *{
+                val epargroups = epars.groupBy { it.ref.type }
+                StackType.values().map {
+                    NumericFeature("ENTRYPOINT_PARAMETER_STACKTYPE_${it.name}_COUNT", epargroups[it]?.count() ?: 0)
+                }
+            }().toTypedArray(),
 
             *epars.filter { it.ref is StackReference }
                 .map { heap.dereference(it.ref as StackReference) }
@@ -220,7 +225,7 @@ object TraceFeatureExtractor {
                 .toTypedArray(),
 
             *defaultStaticFieldValue.groupBy { it.type }
-    //            .filterNot { it.key.className.startsWith("java/") || it.key.className.startsWith("javax") }
+                //            .filterNot { it.key.className.startsWith("java/") || it.key.className.startsWith("javax") }
                 .map { NumericFeature("FIELD_STATIC_SYNTHESISED_${it.key}_COUNT", it.value.count()) }
                 .toTypedArray(),
 

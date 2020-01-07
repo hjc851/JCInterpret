@@ -852,7 +852,15 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
                     TODO()
                 }
             } else {
-                TODO()
+
+                val qbinding = node.qualifier.resolveBinding()
+                if (qbinding is IVariableBinding) {
+                    if (node.name.identifier == "length") {
+                        push(arr_length)
+                        node.qualifier.accept(this)
+                    }
+                } else
+                    TODO()
             }
         }
 
