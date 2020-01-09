@@ -111,17 +111,24 @@ fun main(args: Array<String>) {
                 println("\tInvoking ${project.id} $sig ${Date()}")
                 val interpreter = JavaConcolicInterpreterFactory.build(sig, project.descriptorLibrary, project.sourceLibrary)
                 val traces = interpreter.execute()
+                println("\tReturned ${traces.size} traces.")
                 return@map entry to traces
             }.toList().toMap()
 
             val projDir = dir.resolve(project.id)
             Files.createDirectory(projDir)
 
+            val traceCount = result.values.map { it.size }
+                .sum()
+
+            if (traceCount == 0)
+                System.err.println("WARNING: NO TRACES FOR ${project.id}")
+
             println("\tSaving... ${project.id} at ${Date()}")
             f.add(
                 CompletableFuture.runAsync {
                     for ((entry, traces) in result) {
-                        println("\t\t${entry.binding.qualifiedSignature()}: ${traces.size} traces")
+//                        println("\t\t${entry.binding.qualifiedSignature()}: ${traces.size} traces")
 
                         val msig = entry.binding.qualifiedSignature()
                         val fout = projDir.resolve(msig.toString().replace("/", ".") + ".ser")

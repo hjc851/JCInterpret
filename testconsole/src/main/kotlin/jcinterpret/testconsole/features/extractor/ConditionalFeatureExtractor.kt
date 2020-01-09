@@ -20,44 +20,33 @@ object ConditionalFeatureExtractor {
 
         projects.forEachIndexed { index, project ->
             val id = project.fileName.toString()
-            val pfs = fs.getFeatureSet(id)
             println("\t$id - ${index + 1} of ${projects.count()}")
 
             val traceSetFiles = Files.list(project)
-                .filter { !Files.isDirectory(it) && !Files.isHidden(it) && it.fileName.toString().endsWith(".ser") }
+                .filter { !Files.isDirectory(it) && !Files.isHidden(it) }
                 .use { it.toList() }
 
-            val graphCount = NumericFeature("CONDITIONALGRAPH_COUNT", traceSetFiles.count())
-            pfs.add(graphCount)
+            if (traceSetFiles.isEmpty())
+                Unit
 
-            val graphStats = traceSetFiles.parallelStream()
-                .map { traceSetPath ->
-                    val eptraces = DocumentUtils.readObject(traceSetPath, EntryPointExecutionTraces::class)
-                    val epsig = eptraces.entryPoint.toString().replace("/", ".")
-                        .replace("\"", ".")
+            for (traceSetPath in traceSetFiles) {
+                val eptraces = DocumentUtils.readObject(traceSetPath, EntryPointExecutionTraces::class)
+                val epsig = eptraces.entryPoint.toString().replace("/", ".")
+                    .replace("\"", ".")
 
-                    val records = eptraces.executionTraces.map { it.records }
-                    val cgraph = ConditionalGraphBuilder.build(records)
+                val records = eptraces.executionTraces.map { it.records }
+                val cgraph = ConditionalGraphBuilder.build(records)
 
-                    return@map featuresForGraph(cgraph)
-                }.toList()
+                val features = featuresForGraph(cgraph)
 
-            val groupedFeatures = graphStats.flatten()
-                .groupBy { it.name }
+                val epid = "$id-$epsig"
+                val epfs = fs.getFeatureSet(epid)
 
-            for ((key, features) in groupedFeatures) {
-                val values = features.map { it.value.toDouble() }
-                val min = values.min() ?: 0.0
-                val max = values.max() ?: 0.0
-                val avg = values.average()
+                features.forEach { epfs.add(it) }
 
-                pfs.add(NumericFeature(key + "_MIN", min))
-                pfs.add(NumericFeature(key + "_MAX", max))
-                pfs.add(NumericFeature(key + "_AVG", avg))
+                fs.cacheFeatureSet(epid)
+                System.gc()
             }
-
-            fs.cacheFeatureSet(id)
-            System.gc()
         }
     }
 

@@ -274,14 +274,19 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
     //  Expression
 
     override fun visit(node: ExpressionStatement): Boolean {
-        var storeResult = node.parent is Expression
+        try {
+            var storeResult = node.parent is Expression
 
-        if (node.expression is MethodInvocation)
-            if ((node.expression as MethodInvocation).resolveMethodBinding().returnType.qualifiedName == "void")
-                storeResult = true // i.e. don't pop a value off -> void doesn't return a value
+            if (node.expression is MethodInvocation)
+                if ((node.expression as MethodInvocation).resolveMethodBinding().returnType.qualifiedName == "void")
+                    storeResult = true // i.e. don't pop a value off -> void doesn't return a value
 
-        add(node.expression, storeResult)
-        return false
+            add(node.expression, storeResult)
+            return false
+        } catch (e: Exception) {
+
+            throw e
+        }
     }
 
     //

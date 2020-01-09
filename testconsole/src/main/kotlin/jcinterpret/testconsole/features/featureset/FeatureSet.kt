@@ -93,7 +93,8 @@ class FeatureSet: AutoCloseable {
         internal val features: MutableMap<String, Feature<*>> = mutableMapOf()
 
         fun add(feature: Feature<*>) {
-            if (features.containsKey(feature.name)) throw FeatureNameCollisionException(feature.name, features[feature.name]!!, feature)
+            if (features.containsKey(feature.name))
+                throw FeatureNameCollisionException(feature.name, features[feature.name]!!, feature)
             fs.registerDescriptor(feature.name, feature.descriptor)
             features[feature.name] = feature
         }

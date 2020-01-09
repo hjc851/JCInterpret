@@ -7,6 +7,16 @@ abstract class Feature<T: Serializable> (
 ): Serializable {
     abstract val name: String
     abstract val value: T
+
+    fun rename(name: String): Feature<*> {
+        return descriptor.allocate(name, value)
+    }
+
+    override fun toString(): String {
+        return "Feature(name='$name', value=$value)"
+    }
+
+
 }
 
 abstract class FeatureDescriptor<T: Serializable> {

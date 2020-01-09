@@ -1,9 +1,8 @@
 package jcinterpret.testconsole.features.extractor
 
-import jcinterpret.core.memory.stack.StackType
-import jcinterpret.core.trace.EntryPointExecutionTraces
-import jcinterpret.core.trace.ExecutionTrace
-import jcinterpret.core.trace.TraceRecord
+import jcinterpret.core.memory.heap.*
+import jcinterpret.core.memory.stack.*
+import jcinterpret.core.trace.*
 import jcinterpret.document.DocumentUtils
 import jcinterpret.testconsole.features.featureset.*
 import java.nio.file.Files
@@ -25,7 +24,6 @@ object TraceFeatureExtractor {
         // Iterate through the projects + process
         projects.forEachIndexed { index, project ->
             val id = project.fileName.toString()
-            val pfs = fs.getFeatureSet(id)
             println("\t$id - ${index + 1} of ${projects.count()}")
 
             val traceSetFiles = Files.list(project)
@@ -37,16 +35,23 @@ object TraceFeatureExtractor {
                 val epsig = eptraces.entryPoint.toString().replace("/", ".")
                     .replace("\"", ".")
 
+                val traceId = "$id-$epsig"
+
                 IntStream.range(0, eptraces.executionTraces.size)
                     .parallel()
                     .forEach { index ->
-                        // Extract the features
                         val trace = eptraces.executionTraces[index]
                         val features = featuresForTrace(trace)
 
-                    }
+                        val traceIndexiId = "$traceId-$index"
+                        val tfs = fs.getFeatureSet(traceIndexiId)
 
-                TODO("DO THE FEATURES")
+                        features.values.flatten()
+                            .forEach { tfs.add(it) }
+
+                        fs.cacheFeatureSet(traceIndexiId)
+                        System.gc()
+                    }
             }
         }
     }
@@ -69,6 +74,10 @@ object TraceFeatureExtractor {
         val records = trace.records
 
         val features = mutableMapOf<FeatureType, List<Feature<*>>>()
+
+        val defaultStaticValues = records.filterIsInstance<TraceRecord.DefaultStaticFieldValue>()
+            .map { it.value }
+            .toSet()
 
         // EntryPoint
         val em = records.first { it is TraceRecord.EntryMethod } as TraceRecord.EntryMethod
@@ -135,12 +144,14 @@ object TraceFeatureExtractor {
                 .toTypedArray(),
 
             *heap.storage.values.filterIsInstance<SymbolicObject>()
+                .filter { !defaultStaticValues.contains(it.ref()) }
                 .map { "HEAP_SYMBOLIC_OBJECT_${it.type}_COUNT" to it }
                 .groupBy { it.first }
                 .map { NumericFeature(it.key, it.value.count()) }
                 .toTypedArray(),
 
             *heap.storage.values.filterIsInstance<SymbolicArray>()
+                .filter { !defaultStaticValues.contains(it.ref()) }
                 .map { "HEAP_ARRAY_OBJECT_${it.type}_COUNT" to it }
                 .groupBy { it.first }
                 .map { NumericFeature(it.key, it.value.count()) }
@@ -224,10 +235,10 @@ object TraceFeatureExtractor {
                 .map { NumericFeature("FIELD_STATIC_ASSIGNMENT_HEAPTYPE_${it.key}_COUNT", it.value.count()) }
                 .toTypedArray(),
 
-            *defaultStaticFieldValue.groupBy { it.type }
-                //            .filterNot { it.key.className.startsWith("java/") || it.key.className.startsWith("javax") }
-                .map { NumericFeature("FIELD_STATIC_SYNTHESISED_${it.key}_COUNT", it.value.count()) }
-                .toTypedArray(),
+//            *defaultStaticFieldValue.groupBy { it.type }
+//                //            .filterNot { it.key.className.startsWith("java/") || it.key.className.startsWith("javax") }
+//                .map { NumericFeature("FIELD_STATIC_SYNTHESISED_${it.key}_COUNT", it.value.count()) }
+//                .toTypedArray(),
 
             // Instance
             NumericFeature("FIELD_INSTANCE_ASSIGNMENT_COUNT", instanceFieldPut.count()),
