@@ -64,6 +64,7 @@ object GraphFeatureExtractor {
                 val traceCount = (files.count() - 1) / 5
 
                 val traceFeatures = IntStream.range(0, traceCount)
+                    .parallel()
                     .forEach { i ->
                         // Extract the features
                         val features = mutableMapOf<FeatureType, List<Feature<*>>>()
@@ -90,7 +91,12 @@ object GraphFeatureExtractor {
 
                         for ((featureType, featureList) in features) {
                             for (feature in featureList) {
-                                tfs.add(feature)
+                                try {
+                                    tfs.add(feature)
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                    throw e
+                                }
                             }
                         }
 
@@ -158,7 +164,7 @@ object GraphFeatureExtractor {
             .map { NumericFeature("GRAPH_${prefix}_CONCRETEVALUE_${it.key}_${it.key.javaClass}_COUNT", it.value.count()) }
 
         val byString = nodes.filter { it.hasAttribute(STRING) }
-            .groupBy { it.getAttribute<StringValue>(STRING) }
+            .groupBy { it.getAttribute<StringValue>(STRING).label() }
             .map { NumericFeature("GRAPH_${prefix}_STRING_${it.key}_COUNT", it.value.count()) }
 
         val byConcreteString = nodes.filter { it.hasAttribute(STRING) }

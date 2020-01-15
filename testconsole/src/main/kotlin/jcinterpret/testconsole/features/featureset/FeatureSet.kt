@@ -8,9 +8,9 @@ import java.nio.file.Files
 class FeatureSet: AutoCloseable {
 
     private val featureSetIds = mutableSetOf<String>()
-    private val featureSets: MutableMap<String, ProjectFeatureSet> = mutableMapOf()
+    private val featureSets = mutableMapOf<String, ProjectFeatureSet>()
 
-    private val descriptors: MutableMap<String, FeatureDescriptor<*>> = mutableMapOf()
+    private val descriptors = mutableMapOf<String, FeatureDescriptor<*>>()
 
     private val tempDir = Files.createTempDirectory("FEATURESET")
 
@@ -39,6 +39,7 @@ class FeatureSet: AutoCloseable {
         return featureSets[id]!!
     }
 
+    @Synchronized
     fun registerDescriptor(name: String, descriptor: FeatureDescriptor<*>) {
         if (descriptors.containsKey(name))
             if (descriptors[name] != descriptor)
@@ -92,6 +93,7 @@ class FeatureSet: AutoCloseable {
         internal lateinit var fs: FeatureSet
         internal val features: MutableMap<String, Feature<*>> = mutableMapOf()
 
+        @Synchronized
         fun add(feature: Feature<*>) {
             if (features.containsKey(feature.name))
                 throw FeatureNameCollisionException(feature.name, features[feature.name]!!, feature)

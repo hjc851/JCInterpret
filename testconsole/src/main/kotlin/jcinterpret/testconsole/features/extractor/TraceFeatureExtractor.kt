@@ -46,12 +46,20 @@ object TraceFeatureExtractor {
                         val traceIndexiId = "$traceId-$index"
                         val tfs = fs.getFeatureSet(traceIndexiId)
 
-                        features.values.flatten()
-                            .forEach { tfs.add(it) }
+                        for ((featureType, featureList) in features) {
+                            for (feature in featureList) {
+                                try {
+                                    tfs.add(feature.rename(featureType.name + "_TRACE_" + feature.name))
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            }
+                        }
 
                         fs.cacheFeatureSet(traceIndexiId)
-                        System.gc()
                     }
+
+                System.gc()
             }
         }
     }

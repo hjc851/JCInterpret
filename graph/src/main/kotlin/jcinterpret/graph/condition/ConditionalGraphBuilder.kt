@@ -15,9 +15,13 @@ object ConditionalGraphBuilder {
     }
 
     private fun build(records: List<List<TraceRecord>>, lastForkIndex: Int): BranchGraphNode {
-        val first = records.first()
-        val nextForkIndex = nextAssertionIndex(first, lastForkIndex)
+        val first = records.firstOrNull()
 
+        if (first == null) {
+            return RegularTerminateNode(emptyList())
+        }
+
+        val nextForkIndex = nextAssertionIndex(first, lastForkIndex)
         if (nextForkIndex != null) {
 
             val assertion = first[nextForkIndex] as TraceRecord.Assertion
@@ -33,6 +37,7 @@ object ConditionalGraphBuilder {
             node.trueBranch = build(trueTracers, nextForkIndex).apply {
                 parent = node
             }
+
             node.falseBranch = build(falseTracers, nextForkIndex).apply {
                 parent = node
             }
