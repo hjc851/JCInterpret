@@ -1,4 +1,4 @@
-package jcinterpret.testconsole.features.extractor
+package jcinterpret.feature.extractor
 
 import jcinterpret.core.trace.EntryPointExecutionTraces
 import jcinterpret.document.DocumentUtils
@@ -18,9 +18,11 @@ object ConditionalFeatureExtractor {
             .use { it.toList() }
             .sortedBy { it.fileName.toString() }
 
-        projects.forEachIndexed { index, project ->
+        projects
+            .parallelStream()
+            .forEach { project ->
             val id = project.fileName.toString()
-            println("\t$id - ${index + 1} of ${projects.count()}")
+            println("\t$id")
 
             val traceSetFiles = Files.list(project)
                 .filter { !Files.isDirectory(it) && !Files.isHidden(it) }

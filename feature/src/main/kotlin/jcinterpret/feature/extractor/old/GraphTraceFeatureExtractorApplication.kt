@@ -1,15 +1,11 @@
-package jcinterpret.testconsole.features
+package jcinterpret.feature.extractor.old
 
-import jcinterpret.testconsole.features.extractor.ConditionalFeatureExtractor
-import jcinterpret.testconsole.features.extractor.GraphFeatureExtractor
-import jcinterpret.testconsole.features.extractor.TraceFeatureExtractor
+import jcinterpret.feature.extractor.old.GraphFeatureExtractor
 import jcinterpret.testconsole.features.featureset.FeatureSet
 import weka.core.converters.ArffLoader
 import java.io.PrintWriter
 import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.*
 import kotlin.streams.toList
 
 fun main(args: Array<String>) {
@@ -29,6 +25,9 @@ fun main(args: Array<String>) {
 
     val classes = ids.map { it.split("-")[0] }
         .toSet()
+
+    val ff = 12.toChar().toString()
+    val nc = '\u0000'.toString()
 
     FeatureSet().use { fs ->
 //        println("TRACE")
@@ -55,9 +54,12 @@ fun main(args: Array<String>) {
                     .replace("]", "RBRACE")
                     .replace("(", "LPAR")
                     .replace(")", "RPAR")
+                    .replace("{", "LBRACKET")
+                    .replace("}", "RBRACKET")
                     .replace("/", "DIV")
                     .replace(".", "DOT")
-                    .replace(",", "COMA").replace("#", "HASH")
+                    .replace(",", "COMA")
+                    .replace("#", "HASH")
                     .replace(" ", "SPACE")
                     .replace("%", "PERC")
                     .replace("@", "AT")
@@ -65,6 +67,15 @@ fun main(args: Array<String>) {
                     .replace("-", "MINUS")
                     .replace("=", "EQUALS")
                     .replace("*", "MULTIPLY")
+                    .replace("\"", "QUOTE")
+                    .replace("'", "SQUOTE")
+                    .replace("\n", "NL")
+                    .replace("\r", "CF")
+                    .replace("\t", "TAB")
+                    .replace(ff,"_ff")
+                    .replace(nc, "_null")
+                    .replace(":", "COLON")
+                    .replace(";", "SEMI")
 
                 fout.println("@ATTRIBUTE $name ${desc.descriptor()}")
             }

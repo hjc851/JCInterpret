@@ -1,6 +1,6 @@
-package jcinterpret.testconsole.features
+package jcinterpret.feature.extractor.old
 
-import jcinterpret.testconsole.features.extractor.ConditionalFeatureExtractor
+import jcinterpret.feature.extractor.ConditionalFeatureExtractor
 import jcinterpret.testconsole.features.featureset.FeatureSet
 import weka.core.converters.ArffLoader
 import java.io.PrintWriter

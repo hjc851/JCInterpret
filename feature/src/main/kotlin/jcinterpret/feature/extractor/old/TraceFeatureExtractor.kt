@@ -1,4 +1,4 @@
-package jcinterpret.testconsole.features.extractor
+package jcinterpret.feature.extractor.old
 
 import jcinterpret.core.memory.heap.*
 import jcinterpret.core.memory.stack.*
@@ -41,7 +41,10 @@ object TraceFeatureExtractor {
                     .parallel()
                     .forEach { index ->
                         val trace = eptraces.executionTraces[index]
-                        val features = featuresForTrace(trace)
+                        val features =
+                            featuresForTrace(
+                                trace
+                            )
 
                         val traceIndexiId = "$traceId-$index"
                         val tfs = fs.getFeatureSet(traceIndexiId)
@@ -97,11 +100,19 @@ object TraceFeatureExtractor {
             StringFeature("ENTRYPOINT_QUALIFIED_NAME", em.sig.toString()),
             StringFeature("ENTRYPOINT_SIGNATURE_NAME", em.sig.methodSignature.toString()),
 
-            EnumFeature("ENTRYPOINT_QUALIFIED_${em.sig}", Bool.TRUE, boolDescriptor),
-            EnumFeature("ENTRYPOINT_SIGNATURE_${em.sig.methodSignature}", Bool.TRUE, boolDescriptor),
+            EnumFeature("ENTRYPOINT_QUALIFIED_${em.sig}", Bool.TRUE,
+                boolDescriptor
+            ),
+            EnumFeature("ENTRYPOINT_SIGNATURE_${em.sig.methodSignature}", Bool.TRUE,
+                boolDescriptor
+            ),
 
-            EnumFeature("ENTRYPOINT_SCOPE_PRESENT", if (es != null) Bool.TRUE else Bool.FALSE, boolDescriptor),
-            EnumFeature("ENTRYPOINT_SCOPE_TYPE${est?.type ?: "NONE"}", Bool.TRUE, boolDescriptor),
+            EnumFeature("ENTRYPOINT_SCOPE_PRESENT", if (es != null) Bool.TRUE else Bool.FALSE,
+                boolDescriptor
+            ),
+            EnumFeature("ENTRYPOINT_SCOPE_TYPE${est?.type ?: "NONE"}", Bool.TRUE,
+                boolDescriptor
+            ),
 
             NumericFeature("ENTRYPOINT_PARAMETER_COUNT", epars.count()),
 

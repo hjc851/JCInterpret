@@ -4,6 +4,7 @@ import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import java.io.Serializable
 import java.nio.file.Files
+import java.util.concurrent.ConcurrentHashMap
 
 class FeatureSet: AutoCloseable {
 
@@ -49,9 +50,7 @@ class FeatureSet: AutoCloseable {
     }
 
     fun cacheFeatureSet(id: String) {
-        val pfs = synchronized(this) {
-            featureSets.remove(id)!!
-        }
+        val pfs = featureSets.remove(id)!!
 
         val file = tempDir.resolve("$id.ser")
         Files.newOutputStream(file).use {
@@ -91,7 +90,7 @@ class FeatureSet: AutoCloseable {
     class ProjectFeatureSet: Serializable {
         @Transient
         internal lateinit var fs: FeatureSet
-        internal val features: MutableMap<String, Feature<*>> = mutableMapOf()
+        internal val features: MutableMap<String, Feature<*>> = ConcurrentHashMap()
 
         @Synchronized
         fun add(feature: Feature<*>) {
