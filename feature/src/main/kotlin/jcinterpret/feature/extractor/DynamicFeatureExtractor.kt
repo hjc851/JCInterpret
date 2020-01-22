@@ -167,19 +167,67 @@ class DynamicFeatureExtractor (
         }
 
         val featureNameMap = featureNames.mapIndexed { index, name -> name to index } .toMap()
-        val matrix = Array<DoubleArray>(allFeatureSets.size) { DoubleArray(featureNames.size) }
+        val matrix = Array<DoubleArray>(featureNames.size) { DoubleArray(allFeatureSets.size) }
 
         IntStream.range(0, allFeatureSets.size)
             .parallel()
             .forEach { i ->
                 val featureSet = allFeatureSets[i]
-                val row = matrix[i]
+                val indexedFeatureSet = featureSet.map { it.name to it.value.toDouble() }
+                    .toMap()
 
-                for ((featureName, colIndex) in featureNameMap) {
-
+                for ((featureName, rowIndex) in featureNameMap) {
+                    matrix[rowIndex][i] = indexedFeatureSet[featureName] ?: 0.0
                 }
             }
 
-        TODO()
+        val reducedFeatures = mutableListOf<NumericFeature>()
+        for ((featureName, rowIndex) in featureNameMap) {
+            val scores = matrix[rowIndex]
+
+            val min = scores.min() ?: 0.0
+            val max = scores.max() ?: 0.0
+            val avg = scores.average()
+            val median = scores.median() ?: 0.0
+            val stddev = scores.stddev() ?: 0.0
+            val variance = scores.variance() ?: 0.0
+
+            reducedFeatures.add(NumericFeature("${featureName}_MIN", min))
+            reducedFeatures.add(NumericFeature("${featureName}_MAX", max))
+            reducedFeatures.add(NumericFeature("${featureName}_AVG", avg))
+            reducedFeatures.add(NumericFeature("${featureName}_MEDIAN", median))
+            reducedFeatures.add(NumericFeature("${featureName}_STDDEV", stddev))
+            reducedFeatures.add(NumericFeature("${featureName}_VARIANCE", variance))
+        }
+
+        return reducedFeatures
     }
+}
+
+fun DoubleArray.median(): Double? {
+    if (this.isEmpty()) return null
+
+    val sorted = this.sortedArray()
+    return if (sorted.size % 2 == 0)
+        (sorted[sorted.size/2] + sorted[(sorted.size-1)/2])/2.0
+    else
+        sorted[sorted.size/2]
+
+}
+
+@Strictfp
+fun DoubleArray.stddev(): Double? {
+    if (this.isEmpty()) return null
+
+    return Math.sqrt(this.variance() ?: 0.0)
+}
+
+@Strictfp
+fun DoubleArray.variance(): Double? {
+    if (this.isEmpty()) return null
+
+    val sum = this.sum()
+    val sumsq = this.sumByDouble { it*it }
+    val mean = sum / this.size
+    return sumsq/this.size - mean*mean
 }
