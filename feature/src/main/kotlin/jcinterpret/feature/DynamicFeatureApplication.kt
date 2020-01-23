@@ -8,8 +8,6 @@ import weka.core.converters.ArffLoader
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
-import kotlin.streams.toList
 
 fun main(args: Array<String>) {
     val traceRoot = Paths.get(args[0])
@@ -20,11 +18,12 @@ fun main(args: Array<String>) {
     Files.deleteIfExists(featureOut)
     Files.createFile(featureOut)
 
-    val pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()-4)
+    val workpool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()-2)
+    val waitpool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()-2)
 
     FeatureSet().use { fs ->
-        val extractor = DynamicFeatureExtractor(pool)
-        extractor.extract(traceRoot, graphRoot, fs, extractBranching = true, extractTrace = true, extractGraph = true)
+        val extractor = DynamicFeatureExtractor(workpool, waitpool)
+        extractor.extract(traceRoot, graphRoot, fs, extractBranching = false, extractTrace = false, extractGraph = true)
 
         println("Writing feature set ...")
         Files.newBufferedWriter(featureOut).use { out ->
@@ -36,6 +35,9 @@ fun main(args: Array<String>) {
         loader.setFile(featureOut.toFile())
         loader.dataSet
     }
+
+    workpool.shutdownNow()
+    waitpool.shutdownNow()
 
     println("Finished")
     System.exit(0)

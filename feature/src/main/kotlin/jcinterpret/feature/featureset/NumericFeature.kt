@@ -2,8 +2,12 @@ package jcinterpret.testconsole.features.featureset
 
 class NumericFeature (
     override val name: String,
-    override val value: Number
-): Feature<Number>(NumericFeatureDescriptor)
+    override var value: Number
+): Feature<Number>(NumericFeatureDescriptor) {
+    fun scale(factor: Double) {
+        this.value = this.value.toDouble() * factor
+    }
+}
 
 object NumericFeatureDescriptor: FeatureDescriptor<Number>() {
     override fun create(name: String, value: Number): Feature<Number> {
