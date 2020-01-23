@@ -18,22 +18,27 @@ fun main(args: Array<String>) {
     Files.deleteIfExists(featureOut)
     Files.createFile(featureOut)
 
-    val workpool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()-2)
-    val waitpool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()-2)
+    val workpool = Executors.newFixedThreadPool(28)
+    val waitpool = Executors.newFixedThreadPool(12)
 
-    FeatureSet().use { fs ->
-        val extractor = DynamicFeatureExtractor(workpool, waitpool)
-        extractor.extract(traceRoot, graphRoot, fs, extractBranching = false, extractTrace = false, extractGraph = true)
+    try {
+        FeatureSet().use { fs ->
+            val extractor = DynamicFeatureExtractor(workpool, waitpool)
+            extractor.extract(traceRoot, graphRoot, fs, extractBranching = false, extractTrace = false, extractGraph = true)
 
-        println("Writing feature set ...")
-        Files.newBufferedWriter(featureOut).use { out ->
-            FeatureSetWriter.write(out, fs)
+            println("Writing feature set ...")
+            Files.newBufferedWriter(featureOut).use { out ->
+                FeatureSetWriter.write(out, fs) { id -> id.split("-")[0] }
+            }
+
+            println("Validating feature set ...")
+            val loader = ArffLoader()
+            loader.setFile(featureOut.toFile())
+            loader.dataSet
         }
-
-        println("Validating feature set ...")
-        val loader = ArffLoader()
-        loader.setFile(featureOut.toFile())
-        loader.dataSet
+    } catch (e: Exception) {
+        println("Aborting due to error ...")
+        e.printStackTrace()
     }
 
     workpool.shutdownNow()

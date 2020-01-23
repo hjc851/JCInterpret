@@ -43,6 +43,7 @@ class DynamicFeatureExtractor (
                 .filter { Files.isDirectory(it) && !Files.isHidden(it) }
                 .toList()
                 .sortedBy { it.fileName.toString() }
+                .take(10)
 
             println("Submitting trace jobs ...")
             val traceFutures = traceProjects.map { project ->
@@ -359,7 +360,8 @@ class DynamicFeatureExtractor (
         // Objects of each type
         features.addAll (
             heap.storage.values.filterIsInstance<ConcreteObject>()
-                .map { "HEAP_CONCRETE_OBJECT_${it.type}_COUNT" to it }
+                .map { if (it.type.toString().contains("Ljava")) it.type else "_ReferenceType_" }
+                .map { "HEAP_CONCRETE_OBJECT_${it}_COUNT" to it }
                 .groupBy { it.first }
                 .map { NumericFeature(it.key, it.value.count()) }
         )
@@ -367,7 +369,8 @@ class DynamicFeatureExtractor (
         features.addAll (
             heap.storage.values.filterIsInstance<SymbolicObject>()
                 .filter { !defaultStaticValues.contains(it.ref()) }
-                .map { "HEAP_SYMBOLIC_OBJECT_${it.type}_COUNT" to it }
+                .map { if (it.type.toString().contains("Ljava")) it.type else "_ReferenceType_" }
+                .map { "HEAP_SYMBOLIC_OBJECT_${it}_COUNT" to it }
                 .groupBy { it.first }
                 .map { NumericFeature(it.key, it.value.count()) }
         )
@@ -375,7 +378,8 @@ class DynamicFeatureExtractor (
         features.addAll (
             heap.storage.values.filterIsInstance<SymbolicArray>()
                 .filter { !defaultStaticValues.contains(it.ref()) }
-                .map { "HEAP_ARRAY_OBJECT_${it.type}_COUNT" to it }
+                .map { if (it.type.toString().contains("Ljava")) it.type else "_ReferenceType_" }
+                .map { "HEAP_ARRAY_OBJECT_${it}_COUNT" to it }
                 .groupBy { it.first }
                 .map { NumericFeature(it.key, it.value.count()) }
         )
@@ -384,6 +388,7 @@ class DynamicFeatureExtractor (
     }
 
     private fun featuresForGraph(graph: Graph): List<NumericFeature> {
+
         TODO()
     }
 

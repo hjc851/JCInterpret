@@ -10,7 +10,6 @@ class FeatureSet: AutoCloseable {
 
     private val featureSetIds = mutableSetOf<String>()
     private val featureSets = mutableMapOf<String, ProjectFeatureSet>()
-
     private val descriptors = mutableMapOf<String, FeatureDescriptor<*>>()
 
     private val tempDir = Files.createTempDirectory("FEATURESET")
@@ -33,7 +32,8 @@ class FeatureSet: AutoCloseable {
         }
 
         if (!featureSets.containsKey(id)) {
-            featureSets[id] = ProjectFeatureSet().apply { this.fs = this@FeatureSet }
+            val fs = ProjectFeatureSet().apply { this.fs = this@FeatureSet }
+            featureSets[id] = fs
             featureSetIds.add(id)
         }
 
