@@ -600,8 +600,11 @@ class DynamicFeatureExtractor (
         operators.forEach { makeCommunity(it) }
         methodCalls.forEach { makeCommunity(it) }
 
-        val communityFeatures = communities.map { NumericFeature("GRAPH_COMMUNITIES_${it.key}_COUNT", it.value) }
-        features.addAll(communityFeatures)
+        val communitySize = communities.map { it.value }.sum().toDouble()
+        communities.forEach {
+            features.add(NumericFeature("GRAPH_COMMUNITIES_${it.key}_COUNT", it.value))
+            features.add(NumericFeature("GRAPH_COMMUNITIES_${it.key}_PERC", it.value / communitySize))
+        }
 
         //
         //  Validation - get rid of NaN or Infinity
