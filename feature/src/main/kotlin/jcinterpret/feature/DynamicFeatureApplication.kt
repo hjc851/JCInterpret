@@ -1,6 +1,5 @@
 package jcinterpret.feature
 
-import jcinterpret.feature.extractor.ConditionalFeatureExtractor
 import jcinterpret.feature.extractor.DynamicFeatureExtractor
 import jcinterpret.feature.featureset.FeatureSetWriter
 import jcinterpret.testconsole.features.featureset.FeatureSet
@@ -18,8 +17,8 @@ fun main(args: Array<String>) {
     Files.deleteIfExists(featureOut)
     Files.createFile(featureOut)
 
-    val workpool = Executors.newFixedThreadPool(28)
-    val waitpool = Executors.newFixedThreadPool(12)
+    val workpool = Executors.newFixedThreadPool(8)
+    val waitpool = Executors.newFixedThreadPool(4)
 
     try {
         FeatureSet().use { fs ->

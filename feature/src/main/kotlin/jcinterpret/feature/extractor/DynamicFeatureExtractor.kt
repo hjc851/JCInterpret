@@ -7,14 +7,20 @@ import jcinterpret.core.trace.EntryPointExecutionTraces
 import jcinterpret.core.trace.ExecutionTrace
 import jcinterpret.core.trace.TraceRecord
 import jcinterpret.document.DocumentUtils
+import jcinterpret.graph.*
 import jcinterpret.graph.condition.ConditionalGraphBuilder
 import jcinterpret.graph.condition.RootBranchGraphNode
+import jcinterpret.graph.execution.EdgeType
+import jcinterpret.graph.execution.NodeAttributeKeys
+import jcinterpret.graph.execution.NodeType
 import jcinterpret.graph.serialization.GraphSerializationAdapter
 import jcinterpret.graph.serialization.toGraph
 import jcinterpret.testconsole.features.featureset.FeatureSet
 import jcinterpret.testconsole.features.featureset.NumericFeature
 import jcinterpret.testconsole.pipeline.GraphManifest
+import org.graphstream.graph.Edge
 import org.graphstream.graph.Graph
+import org.graphstream.graph.Node
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
@@ -387,9 +393,225 @@ class DynamicFeatureExtractor (
         return features
     }
 
-    private fun featuresForGraph(graph: Graph): List<NumericFeature> {
+    /*
+    % data
+    % operators
+    % ...
+    % ratios of key types
 
-        TODO()
+    Neighborhoods around operators + calls
+
+    Spans
+     */
+
+    private fun featuresForGraph(graph: Graph): List<NumericFeature> {
+        val features = mutableListOf<NumericFeature>()
+
+        //
+        // Node Stats
+        //
+        val nodes = graph.getNodeSet<Node>()
+        val nodeCount = nodes.count().toDouble()
+
+        val operators = nodes.filter { it.isOperator() }
+        val methodCalls = nodes.filter { it.isMethodCall() }
+        val data = nodes.filter { it.isData() }
+        val datacount = data.count().toDouble()
+
+        val objects = nodes.filter { it.isObject() }
+        val values = nodes.filter { it.isValue() }
+        val strings = nodes.filter { it.isString() }
+        val objectcount = objects.count().toDouble()
+        val valuecount = values.count().toDouble()
+        val stringcount = strings.count().toDouble()
+
+        val symbolic = nodes.filter { it.isSymbolic() }
+        val synthetic = nodes.filter { it.isSynthetic() }
+        val concrete = nodes.filter { it.isConcrete() }
+        val symboliccount = symbolic.count().toDouble()
+        val syntheticcount = synthetic.count().toDouble()
+        val concretecount = concrete.count().toDouble()
+
+        // Raw Counts
+        features.addAll(
+            NumericFeature("GRAPH_NODE_TOTAL_COUNT", nodeCount),
+
+            NumericFeature("GRAPH_NODE_OPERATOR_COUNT", operators.count()),
+            NumericFeature("GRAPH_NODE_METHODCALL_COUNT", methodCalls.count()),
+            NumericFeature("GRAPH_NODE_DATA_COUNT", data.count()),
+
+            NumericFeature("GRAPH_NODE_DATA_OBJECTS_COUNT", objects.count()),
+            NumericFeature("GRAPH_NODE_DATA_VALUES_COUNT", values.count()),
+            NumericFeature("GRAPH_NODE_DATA_STRING_COUNT", strings.count()),
+
+            NumericFeature("GRAPH_NODE_DATA_SYMBOLIC_COUNT", symbolic.count()),
+            NumericFeature("GRAPH_NODE_DATA_SYNTHETIC_COUNT", synthetic.count()),
+            NumericFeature("GRAPH_NODE_DATA_CONCRETE_COUNT", concrete.count())
+        )
+
+        // Percentages
+        features.addAll(
+            NumericFeature("GRAPH_NODE_OPERATORS_PERC", operators.count() / nodeCount),
+            NumericFeature("GRAPH_NODE_METHODCALL_PERC", methodCalls.count() / nodeCount),
+            NumericFeature("GRAPH_NODE_DATA_PERC", data.count() / nodeCount),
+
+            NumericFeature("GRAPH_NODE_DATA_OBJECT_PERC", objects.count() / datacount),
+            NumericFeature("GRAPH_NODE_DATA_VALUE_PERC", values.count() / datacount),
+            NumericFeature("GRAPH_NODE_DATA_STRING_PERC", strings.count() / datacount),
+
+            NumericFeature("GRAPH_NODE_DATA_SYMBOLIC_PERC", symbolic.count() / datacount),
+            NumericFeature("GRAPH_NODE_DATA_SYNTHETIC_PERC", synthetic.count() / datacount),
+            NumericFeature("GRAPH_NODE_DATA_CONCRETE_PERC", concrete.count() / datacount)
+        )
+
+        // Ratios
+        features.addAll(
+            NumericFeature("GRAPH_NODE_DATA_RATIO_OBJECT_VALUE", objectcount / valuecount),
+            NumericFeature("GRAPH_NODE_DATA_RATIO_OBJECT_STRING", objectcount / stringcount),
+            NumericFeature("GRAPH_NODE_DATA_RATIO_VALUE_OBJECT", valuecount / objectcount),
+            NumericFeature("GRAPH_NODE_DATA_RATIO_VALUE_STRING", valuecount / stringcount),
+            NumericFeature("GRAPH_NODE_DATA_RATIO_STRING_OBJECT", stringcount / objectcount),
+            NumericFeature("GRAPH_NODE_DATA_RATIO_STRING_VALUE", stringcount / valuecount),
+
+            NumericFeature("GRAPH_NODE_DATA_RATIO_SYMBOLIC_SYNTHETIC", symboliccount / syntheticcount),
+            NumericFeature("GRAPH_NODE_DATA_RATIO_SYMBOLIC_CONCRETE", symboliccount / concretecount),
+            NumericFeature("GRAPH_NODE_DATA_RATIO_SYNTHETIC_SYMBOLIC", syntheticcount / symboliccount),
+            NumericFeature("GRAPH_NODE_DATA_RATIO_SYNTHETIC_CONCRETE", syntheticcount / concretecount),
+            NumericFeature("GRAPH_NODE_DATA_RATIO_CONCRETE_SYMBOLIC", concretecount / symboliccount),
+            NumericFeature("GRAPH_NODE_DATA_RATIO_CONCRETE_SYNTHETIC", concretecount / syntheticcount)
+        )
+
+        //
+        // Edge Stats
+        //
+        val edges = graph.getEdgeSet<Edge>()
+        val edgeCount = edges.count()
+
+        val transformations = edges.filter { it.isTransformation() }
+        val aggregations = edges.filter { it.isAggregation() }
+        val parameters = edges.filter { it.isParameter() }
+        val scope = edges.filter { it.isScope() }
+        val supplies = edges.filter { it.isSupplies() }
+
+        val transformationcount = transformations.count().toDouble()
+        val aggregationcount = aggregations.count().toDouble()
+        val parametercount = parameters.count().toDouble()
+        val scopecount = scope.count().toDouble()
+        val suppliescount = supplies.count().toDouble()
+
+        // raw counts
+        features.addAll(
+            NumericFeature("GRAPH_EDGE_TOTAL_COUNT", edgeCount),
+
+            NumericFeature("GRAPH_EDGE_TRANSFORMATION_COUNT", transformationcount),
+            NumericFeature("GRAPH_EDGE_AGGREGATION_COUNT", aggregationcount),
+            NumericFeature("GRAPH_EDGE_PARAMETER_COUNT", parametercount),
+            NumericFeature("GRAPH_EDGE_SCOPE_COUNT", scopecount),
+            NumericFeature("GRAPH_EDGE_SUPPLIES_COUNT", suppliescount)
+        )
+
+        // percentages
+        features.addAll(
+            NumericFeature("GRAPH_EDGE_TRANSFORMATION_PERC", transformationcount / edgeCount),
+            NumericFeature("GRAPH_EDGE_AGGREGATION_PERC", aggregationcount / edgeCount),
+            NumericFeature("GRAPH_EDGE_PARAMETER_PERC", parametercount / edgeCount),
+            NumericFeature("GRAPH_EDGE_SCOPE_PERC", scopecount / edgeCount),
+            NumericFeature("GRAPH_EDGE_SUPPLIES_PERC", suppliescount / edgeCount)
+        )
+
+        // ratios
+        features.addAll(
+            NumericFeature("GRAPH_EDGE_RATIO_TRANSFORMATION_AGGREGATION", transformationcount / aggregationcount),
+            NumericFeature("GRAPH_EDGE_RATIO_TRANSFORMATION_PARAMETER", transformationcount / parametercount),
+            NumericFeature("GRAPH_EDGE_RATIO_TRANSFORMATION_SCOPE", transformationcount / scopecount),
+            NumericFeature("GRAPH_EDGE_RATIO_TRANSFORMATION_SUPPLIES", transformationcount / suppliescount),
+
+            NumericFeature("GRAPH_EDGE_RATIO_AGGREGATION_TRANSFORMATION", aggregationcount / transformationcount),
+            NumericFeature("GRAPH_EDGE_RATIO_AGGREGATION_PARAMETER", aggregationcount / parametercount),
+            NumericFeature("GRAPH_EDGE_RATIO_AGGREGATION_SCOPE", aggregationcount / scopecount),
+            NumericFeature("GRAPH_EDGE_RATIO_AGGREGATION_SUPPLIES", aggregationcount / suppliescount),
+
+            NumericFeature("GRAPH_EDGE_RATIO_PARAMETER_TRANSFORMATION", parametercount / transformationcount),
+            NumericFeature("GRAPH_EDGE_RATIO_PARAMETER_AGGREGATION", parametercount / aggregationcount),
+            NumericFeature("GRAPH_EDGE_RATIO_PARAMETER_SCOPE", parametercount / scopecount),
+            NumericFeature("GRAPH_EDGE_RATIO_PARAMETER_SUPPLIES", parametercount / suppliescount),
+
+            NumericFeature("GRAPH_EDGE_RATIO_SCOPE_TRANSFORMATION", scopecount / transformationcount),
+            NumericFeature("GRAPH_EDGE_RATIO_SCOPE_AGGREGATION", scopecount / aggregationcount),
+            NumericFeature("GRAPH_EDGE_RATIO_SCOPE_PARAMETER", scopecount / parametercount),
+            NumericFeature("GRAPH_EDGE_RATIO_SCOPE_SUPPLIES", scopecount / suppliescount),
+
+            NumericFeature("GRAPH_EDGE_RATIO_SUPPLIES_TRANSFORMATION", suppliescount / transformationcount),
+            NumericFeature("GRAPH_EDGE_RATIO_SUPPLIES_AGGREGATION", suppliescount / aggregationcount),
+            NumericFeature("GRAPH_EDGE_RATIO_SUPPLIES_PARAMETER", suppliescount / parametercount),
+            NumericFeature("GRAPH_EDGE_RATIO_SUPPLIES_SCOPE", suppliescount / scopecount)
+        )
+
+        //
+        //  Communities
+        //
+
+        fun Node.key(): String {
+            val type = this.getAttribute<NodeType>(NodeAttributeKeys.NODETYPE)
+            return when (type) {
+                NodeType.VALUE -> "V"
+                NodeType.OBJECT -> "Ob"
+                NodeType.OPERATOR -> "Op"
+                NodeType.ENTRYPOINT -> "E"
+                NodeType.METHODCALL -> "M"
+            }
+        }
+
+        fun Edge.key(): String {
+            val type = this.getAttribute<EdgeType>(NodeAttributeKeys.EDGETYPE)
+            return when (type) {
+                EdgeType.SCOPE -> "Sc"
+                EdgeType.SUPPLIES -> "Su"
+                EdgeType.PARAMETER -> "P"
+                EdgeType.AGGREGATION -> "A"
+                EdgeType.TRANSFORMATION -> "T"
+            }
+        }
+
+        val communities = mutableMapOf<String, Int>()
+
+        fun makeCommunity(node: Node) {
+            val neighbours = node.getEdgeSet<Edge>()
+                .map { it to it.getOpposite<Node>(node) }
+                .sortedBy { it.second.getAttribute<NodeType>(NodeAttributeKeys.NODETYPE) }
+
+            val id = StringBuffer()
+
+            id.append("${node.key()}_")
+            for (neighbour in neighbours) {
+                id.append(neighbour.first.key())
+                id.append(neighbour.second.key())
+            }
+
+            val community = id.toString()
+            communities[community] = communities.getOrDefault(community, 0) + 1
+        }
+
+        val ep = nodes.firstOrNull { it.isEntryPoint() }
+        ep?.let { makeCommunity(it) }
+
+        val eparams = nodes.filter { it.isEntryParameter() }
+        eparams.forEach { makeCommunity(it) }
+        operators.forEach { makeCommunity(it) }
+        methodCalls.forEach { makeCommunity(it) }
+
+        val communityFeatures = communities.map { NumericFeature("GRAPH_COMMUNITIES_${it.key}_COUNT", it.value) }
+        features.addAll(communityFeatures)
+
+        //
+        //  Validation - get rid of NaN or Infinity
+        //
+
+        for (feature in features)
+            if (feature.value == Double.NaN || feature.value == Double.NEGATIVE_INFINITY || feature.value == Double.POSITIVE_INFINITY)
+                feature.value = 0.0
+
+        return features
     }
 
     private fun aggregateFeatures(allFeatureSets: List<List<NumericFeature>>): List<NumericFeature> {
