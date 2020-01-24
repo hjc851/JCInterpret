@@ -206,8 +206,8 @@ class DynamicFeatureExtractor (
         var ngramSum = 0.0
         for ((ngram, count) in ngrams) ngramSum += count.toDouble()
 
-        features.add(NumericFeature("TRACE_TRIGRAM_ALL_COUNT", ngramSum))
-        features.add(NumericFeature("TRACE_TRIGRAM_TYPES_COUNT", ngrams.count()))
+//        features.add(NumericFeature("TRACE_TRIGRAM_ALL_COUNT", ngramSum))
+//        features.add(NumericFeature("TRACE_TRIGRAM_TYPES_COUNT", ngrams.count()))
 
 //        features.add(NumericFeature("TRACE_TRIGRAM_ALL_LOGCOUNT", ln(ngramSum)))
 //        features.add(NumericFeature("TRACE_TRIGRAM_TYPES_LOGCOUNT", ln(ngrams.count().toDouble())))
@@ -215,7 +215,7 @@ class DynamicFeatureExtractor (
         for ((ngram, count) in ngrams) {
             val perc = count / ngramSum
 
-            features.add(NumericFeature("TRACE_TRIGRAM_${ngram}_COUNT", count))
+//            features.add(NumericFeature("TRACE_TRIGRAM_${ngram}_COUNT", count))
             features.add(NumericFeature("TRACE_TRIGRAM_${ngram}_PERC", perc))
 
 //            features.add(NumericFeature("TRACE_TRIGRAM_${ngram}_LOGCOUNT", ln(count.toDouble())))
@@ -229,8 +229,8 @@ class DynamicFeatureExtractor (
         val recordCount = records.count().toDouble()
         val recordGroups = records.groupBy { it.javaClass }
 
-        features.add(NumericFeature("TRACE_RECORDS_ALL_COUNT", recordCount))
-        features.add(NumericFeature("TRACE_RECORDS_GROUPS_COUNT", recordGroups.size))
+//        features.add(NumericFeature("TRACE_RECORDS_ALL_COUNT", recordCount))
+//        features.add(NumericFeature("TRACE_RECORDS_GROUPS_COUNT", recordGroups.size))
 
 //        features.add(NumericFeature("TRACE_RECORDS_ALL_LOGCOUNT", ln(recordCount)))
 //        features.add(NumericFeature("TRACE_RECORDS_GROUPS_LOGCOUNT", ln(recordGroups.size.toDouble())))
@@ -240,7 +240,7 @@ class DynamicFeatureExtractor (
             val perc = count / recordCount
             val name = type.simpleName
 
-            features.add(NumericFeature("TRACE_RECORDS_${name}_COUNT", count))
+//            features.add(NumericFeature("TRACE_RECORDS_${name}_COUNT", count))
             features.add(NumericFeature("TRACE_RECORDS_${name}_PERC", perc))
 
 //            features.add(NumericFeature("TRACE_RECORDS_${name}_LOGCOUNT", ln(count)))
@@ -264,9 +264,10 @@ class DynamicFeatureExtractor (
         val staticMethodCallCount = staticLibraryMethodCalls.size.toDouble()
         val totalMethodCallCount = instanceMethodCallCount + staticMethodCallCount
 
-        features.add(NumericFeature("TRACE_CALL_INSTANCE_COUNT", instanceMethodCallCount))
+//        features.add(NumericFeature("TRACE_CALL_INSTANCE_COUNT", instanceMethodCallCount))
+        //        features.add(NumericFeature("TRACE_CALL_STATIC_COUNT", staticMethodCallCount))
+
         features.add(NumericFeature("TRACE_CALL_INSTANCE_PERC", instanceMethodCallCount / totalMethodCallCount.toDouble()))
-        features.add(NumericFeature("TRACE_CALL_STATIC_COUNT", staticMethodCallCount))
         features.add(NumericFeature("TRACE_CALL_STATIC_PERC", staticMethodCallCount / totalMethodCallCount.toDouble()))
 
 //        features.add(NumericFeature("TRACE_CALL_INSTANCE_LOGCOUNT", ln(instanceMethodCallCount)))
@@ -278,7 +279,7 @@ class DynamicFeatureExtractor (
             val perc = calls.size.toDouble() / instanceMethodCallCount
             val percTotal = calls.size.toDouble() / totalMethodCallCount
 
-            features.add(NumericFeature("TRACE_CALL_INSTANCE_QUALIFIED_${sig}_COUNT", calls.size))
+//            features.add(NumericFeature("TRACE_CALL_INSTANCE_QUALIFIED_${sig}_COUNT", calls.size))
             features.add(NumericFeature("TRACE_CALL_INSTANCE_QUALIFIED_${sig}_PERCINSTANCE", perc))
             features.add(NumericFeature("TRACE_CALL_INSTANCE_QUALIFIED_${sig}_PERCTOTAL", percTotal))
 
@@ -291,7 +292,7 @@ class DynamicFeatureExtractor (
             val perc = calls.size.toDouble() / instanceMethodCallCount
             val percTotal = calls.size.toDouble() / totalMethodCallCount
 
-            features.add(NumericFeature("TRACE_CALL_INSTANCE_${sig}_COUNT", calls.size))
+//            features.add(NumericFeature("TRACE_CALL_INSTANCE_${sig}_COUNT", calls.size))
             features.add(NumericFeature("TRACE_CALL_INSTANCE_${sig}_PERCINSTANCE", perc))
             features.add(NumericFeature("TRACE_CALL_INSTANCE_${sig}_PERCTOTAL", percTotal))
 
@@ -304,7 +305,7 @@ class DynamicFeatureExtractor (
             val perc = calls.size.toDouble() / staticMethodCallCount
             val percTotal = calls.size.toDouble() / totalMethodCallCount
 
-            features.add(NumericFeature("TRACE_CALL_STATIC_QUALIFIED_${sig}_COUNT", calls.size))
+//            features.add(NumericFeature("TRACE_CALL_STATIC_QUALIFIED_${sig}_COUNT", calls.size))
             features.add(NumericFeature("TRACE_CALL_STATIC_QUALIFIED_${sig}_PERCINSTANCE", perc))
             features.add(NumericFeature("TRACE_CALL_STATIC_QUALIFIED_${sig}_PERCTOTAL", percTotal))
 
@@ -317,7 +318,7 @@ class DynamicFeatureExtractor (
             val perc = calls.size.toDouble() / staticMethodCallCount
             val percTotal = calls.size.toDouble() / totalMethodCallCount
 
-            features.add(NumericFeature("TRACE_CALL_STATIC_${sig}_COUNT", calls.size))
+//            features.add(NumericFeature("TRACE_CALL_STATIC_${sig}_COUNT", calls.size))
             features.add(NumericFeature("TRACE_CALL_STATIC_${sig}_PERCINSTANCE", perc))
             features.add(NumericFeature("TRACE_CALL_STATIC_${sig}_PERCTOTAL", percTotal))
 
@@ -331,63 +332,114 @@ class DynamicFeatureExtractor (
         //
 
         val heap = trace.heapArea
+        val heapSize = heap.storage.size.toDouble()
         val defaultStaticValues = records.filterIsInstance<TraceRecord.DefaultStaticFieldValue>()
             .map { it.value }
             .toSet()
 
         // Total heap count
-        features.add(NumericFeature("HEAP_COUNT", heap.storage.count()))
+//        features.add(NumericFeature("HEAP_COUNT", heap.storage.count()))
 
         // Count of each non-boxed type
+//        features.addAll (
+//            NumericFeature("HEAP_CONCRETE_OBJECT_COUNT", heap.storage.values.count { it is ConcreteObject }),
+//            NumericFeature("HEAP_SYMBOLIC_OBJECT_COUNT", heap.storage.values.count { it is SymbolicObject }),
+//            NumericFeature("HEAP_ARRAY_OBJECT_COUNT", heap.storage.values.count { it is SymbolicArray }),
+//            NumericFeature("HEAP_CLASS_LIT_OBJECT_COUNT", heap.storage.values.count { it is ClassObject })
+//        )
+
         features.addAll (
-            NumericFeature("HEAP_CONCRETE_OBJECT_COUNT", heap.storage.values.count { it is ConcreteObject }),
-            NumericFeature("HEAP_SYMBOLIC_OBJECT_COUNT", heap.storage.values.count { it is SymbolicObject }),
-            NumericFeature("HEAP_ARRAY_OBJECT_COUNT", heap.storage.values.count { it is SymbolicArray }),
-            NumericFeature("HEAP_CLASS_LIT_OBJECT_COUNT", heap.storage.values.count { it is ClassObject })
+            NumericFeature("HEAP_CONCRETE_OBJECT_PERC", heap.storage.values.count { it is ConcreteObject } / heapSize),
+            NumericFeature("HEAP_SYMBOLIC_OBJECT_PERC", heap.storage.values.count { it is SymbolicObject } / heapSize),
+            NumericFeature("HEAP_ARRAY_OBJECT_PERC", heap.storage.values.count { it is SymbolicArray } / heapSize),
+            NumericFeature("HEAP_CLASS_LIT_OBJECT_PERC", heap.storage.values.count { it is ClassObject } / heapSize)
         )
 
         // String
+//        features.addAll (
+//            NumericFeature("HEAP_STRING_COUNT", heap.storage.values.count { it is BoxedStringObject }),
+//            NumericFeature("HEAP_CONCRETE_STRING_COUNT", heap.storage.values.count { it is BoxedStringObject && it.value is ConcreteStringValue }),
+//            NumericFeature("HEAP_SYMBOLIC_STRING_COUNT", heap.storage.values.count { it is BoxedStringObject && it.value is SymbolicStringValue }),
+//            NumericFeature("HEAP_STRINGIFIED_STACK_VALUE_COUNT", heap.storage.values.count { it is BoxedStringObject && it.value is StackValueStringValue }),
+//            NumericFeature("HEAP_COMPOSITE_STACK_VALUE_COUNT", heap.storage.values.count { it is BoxedStringObject && it.value is CompositeStringValue })
+//        )
+
         features.addAll (
-            NumericFeature("HEAP_STRING_COUNT", heap.storage.values.count { it is BoxedStringObject }),
-            NumericFeature("HEAP_CONCRETE_STRING_COUNT", heap.storage.values.count { it is BoxedStringObject && it.value is ConcreteStringValue }),
-            NumericFeature("HEAP_SYMBOLIC_STRING_COUNT", heap.storage.values.count { it is BoxedStringObject && it.value is SymbolicStringValue }),
-            NumericFeature("HEAP_STRINGIFIED_STACK_VALUE_COUNT", heap.storage.values.count { it is BoxedStringObject && it.value is StackValueStringValue }),
-            NumericFeature("HEAP_COMPOSITE_STACK_VALUE_COUNT", heap.storage.values.count { it is BoxedStringObject && it.value is CompositeStringValue })
+            NumericFeature("HEAP_STRING_PERC", heap.storage.values.count { it is BoxedStringObject }),
+            NumericFeature("HEAP_CONCRETE_STRING_PERC", heap.storage.values.count { it is BoxedStringObject && it.value is ConcreteStringValue } / heapSize),
+            NumericFeature("HEAP_SYMBOLIC_STRING_PERC", heap.storage.values.count { it is BoxedStringObject && it.value is SymbolicStringValue } / heapSize),
+            NumericFeature("HEAP_STRINGIFIED_STACK_VALUE_PERC", heap.storage.values.count { it is BoxedStringObject && it.value is StackValueStringValue } / heapSize),
+            NumericFeature("HEAP_COMPOSITE_STACK_VALUE_PERC", heap.storage.values.count { it is BoxedStringObject && it.value is CompositeStringValue } / heapSize)
         )
 
+
         // Boxed Value
-        features.add(NumericFeature("HEAP_BOXED_COUNT", heap.storage.values.count { it is BoxedStackValueObject }))
+//        features.add(NumericFeature("HEAP_BOXED_COUNT", heap.storage.values.count { it is BoxedStackValueObject }))
+//        features.addAll (
+//            heap.storage.values.filterIsInstance<BoxedStackValueObject>()
+//                .groupBy { it.value.type }
+//                .map { NumericFeature("HEAP_BOXED_${it.key.name}_COUNT", it.value.size) }
+//        )
+
+        features.add(NumericFeature("HEAP_BOXED_PERC", heap.storage.values.count { it is BoxedStackValueObject } / heapSize))
         features.addAll (
             heap.storage.values.filterIsInstance<BoxedStackValueObject>()
                 .groupBy { it.value.type }
-                .map { NumericFeature("HEAP_BOXED_${it.key.name}_COUNT", it.value.size) }
+                .map { NumericFeature("HEAP_BOXED_${it.key.name}_PERC", it.value.size / heapSize) }
         )
 
+
         // Objects of each type
+//        features.addAll (
+//            heap.storage.values.filterIsInstance<ConcreteObject>()
+//                .map { if (it.type.toString().contains("Ljava")) it.type else "_ReferenceType_" }
+//                .map { "HEAP_CONCRETE_OBJECT_${it}_COUNT" to it }
+//                .groupBy { it.first }
+//                .map { NumericFeature(it.key, it.value.count()) }
+//        )
+
+//        features.addAll (
+//            heap.storage.values.filterIsInstance<SymbolicObject>()
+//                .filter { !defaultStaticValues.contains(it.ref()) }
+//                .map { if (it.type.toString().contains("Ljava")) it.type else "_ReferenceType_" }
+//                .map { "HEAP_SYMBOLIC_OBJECT_${it}_COUNT" to it }
+//                .groupBy { it.first }
+//                .map { NumericFeature(it.key, it.value.count()) }
+//        )
+
+//        features.addAll (
+//            heap.storage.values.filterIsInstance<SymbolicArray>()
+//                .filter { !defaultStaticValues.contains(it.ref()) }
+//                .map { if (it.type.toString().contains("Ljava")) it.type else "_ReferenceType_" }
+//                .map { "HEAP_ARRAY_OBJECT_${it}_COUNT" to it }
+//                .groupBy { it.first }
+//                .map { NumericFeature(it.key, it.value.count()) }
+//        )
+
         features.addAll (
             heap.storage.values.filterIsInstance<ConcreteObject>()
                 .map { if (it.type.toString().contains("Ljava")) it.type else "_ReferenceType_" }
-                .map { "HEAP_CONCRETE_OBJECT_${it}_COUNT" to it }
+                .map { "HEAP_CONCRETE_OBJECT_${it}_PERC" to it }
                 .groupBy { it.first }
-                .map { NumericFeature(it.key, it.value.count()) }
+                .map { NumericFeature(it.key, it.value.count() / heapSize) }
         )
 
         features.addAll (
             heap.storage.values.filterIsInstance<SymbolicObject>()
                 .filter { !defaultStaticValues.contains(it.ref()) }
                 .map { if (it.type.toString().contains("Ljava")) it.type else "_ReferenceType_" }
-                .map { "HEAP_SYMBOLIC_OBJECT_${it}_COUNT" to it }
+                .map { "HEAP_SYMBOLIC_OBJECT_${it}_PERC" to it }
                 .groupBy { it.first }
-                .map { NumericFeature(it.key, it.value.count()) }
+                .map { NumericFeature(it.key, it.value.count() / heapSize) }
         )
 
         features.addAll (
             heap.storage.values.filterIsInstance<SymbolicArray>()
                 .filter { !defaultStaticValues.contains(it.ref()) }
                 .map { if (it.type.toString().contains("Ljava")) it.type else "_ReferenceType_" }
-                .map { "HEAP_ARRAY_OBJECT_${it}_COUNT" to it }
+                .map { "HEAP_ARRAY_OBJECT_${it}_PERC" to it }
                 .groupBy { it.first }
-                .map { NumericFeature(it.key, it.value.count()) }
+                .map { NumericFeature(it.key, it.value.count() / heapSize) }
         )
 
         return features
@@ -433,21 +485,21 @@ class DynamicFeatureExtractor (
         val concretecount = concrete.count().toDouble()
 
         // Raw Counts
-        features.addAll(
-            NumericFeature("GRAPH_NODE_TOTAL_COUNT", nodeCount),
-
-            NumericFeature("GRAPH_NODE_OPERATOR_COUNT", operators.count()),
-            NumericFeature("GRAPH_NODE_METHODCALL_COUNT", methodCalls.count()),
-            NumericFeature("GRAPH_NODE_DATA_COUNT", data.count()),
-
-            NumericFeature("GRAPH_NODE_DATA_OBJECTS_COUNT", objects.count()),
-            NumericFeature("GRAPH_NODE_DATA_VALUES_COUNT", values.count()),
-            NumericFeature("GRAPH_NODE_DATA_STRING_COUNT", strings.count()),
-
-            NumericFeature("GRAPH_NODE_DATA_SYMBOLIC_COUNT", symbolic.count()),
-            NumericFeature("GRAPH_NODE_DATA_SYNTHETIC_COUNT", synthetic.count()),
-            NumericFeature("GRAPH_NODE_DATA_CONCRETE_COUNT", concrete.count())
-        )
+//        features.addAll(
+//            NumericFeature("GRAPH_NODE_TOTAL_COUNT", nodeCount),
+//
+//            NumericFeature("GRAPH_NODE_OPERATOR_COUNT", operators.count()),
+//            NumericFeature("GRAPH_NODE_METHODCALL_COUNT", methodCalls.count()),
+//            NumericFeature("GRAPH_NODE_DATA_COUNT", data.count()),
+//
+//            NumericFeature("GRAPH_NODE_DATA_OBJECTS_COUNT", objects.count()),
+//            NumericFeature("GRAPH_NODE_DATA_VALUES_COUNT", values.count()),
+//            NumericFeature("GRAPH_NODE_DATA_STRING_COUNT", strings.count()),
+//
+//            NumericFeature("GRAPH_NODE_DATA_SYMBOLIC_COUNT", symbolic.count()),
+//            NumericFeature("GRAPH_NODE_DATA_SYNTHETIC_COUNT", synthetic.count()),
+//            NumericFeature("GRAPH_NODE_DATA_CONCRETE_COUNT", concrete.count())
+//        )
 
         // Percentages
         features.addAll(
@@ -500,15 +552,15 @@ class DynamicFeatureExtractor (
         val suppliescount = supplies.count().toDouble()
 
         // raw counts
-        features.addAll(
-            NumericFeature("GRAPH_EDGE_TOTAL_COUNT", edgeCount),
-
-            NumericFeature("GRAPH_EDGE_TRANSFORMATION_COUNT", transformationcount),
-            NumericFeature("GRAPH_EDGE_AGGREGATION_COUNT", aggregationcount),
-            NumericFeature("GRAPH_EDGE_PARAMETER_COUNT", parametercount),
-            NumericFeature("GRAPH_EDGE_SCOPE_COUNT", scopecount),
-            NumericFeature("GRAPH_EDGE_SUPPLIES_COUNT", suppliescount)
-        )
+//        features.addAll(
+//            NumericFeature("GRAPH_EDGE_TOTAL_COUNT", edgeCount),
+//
+//            NumericFeature("GRAPH_EDGE_TRANSFORMATION_COUNT", transformationcount),
+//            NumericFeature("GRAPH_EDGE_AGGREGATION_COUNT", aggregationcount),
+//            NumericFeature("GRAPH_EDGE_PARAMETER_COUNT", parametercount),
+//            NumericFeature("GRAPH_EDGE_SCOPE_COUNT", scopecount),
+//            NumericFeature("GRAPH_EDGE_SUPPLIES_COUNT", suppliescount)
+//        )
 
         // percentages
         features.addAll(
@@ -602,7 +654,7 @@ class DynamicFeatureExtractor (
 
         val communitySize = communities.map { it.value }.sum().toDouble()
         communities.forEach {
-            features.add(NumericFeature("GRAPH_COMMUNITIES_${it.key}_COUNT", it.value))
+//            features.add(NumericFeature("GRAPH_COMMUNITIES_${it.key}_COUNT", it.value))
             features.add(NumericFeature("GRAPH_COMMUNITIES_${it.key}_PERC", it.value / communitySize))
         }
 
@@ -654,9 +706,9 @@ class DynamicFeatureExtractor (
             reducedFeatures.add(NumericFeature("${featureName}_MIN", min))
             reducedFeatures.add(NumericFeature("${featureName}_MAX", max))
             reducedFeatures.add(NumericFeature("${featureName}_AVG", avg))
-            reducedFeatures.add(NumericFeature("${featureName}_MEDIAN", median))
-            reducedFeatures.add(NumericFeature("${featureName}_STDDEV", stddev))
-            reducedFeatures.add(NumericFeature("${featureName}_VARIANCE", variance))
+//            reducedFeatures.add(NumericFeature("${featureName}_MEDIAN", median))
+//            reducedFeatures.add(NumericFeature("${featureName}_STDDEV", stddev))
+//            reducedFeatures.add(NumericFeature("${featureName}_VARIANCE", variance))
         }
 
         return reducedFeatures
