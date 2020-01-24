@@ -2,6 +2,7 @@ package jcinterpret.feature.extractor
 
 import jcinterpret.core.ctx.meta.HeapArea
 import jcinterpret.core.memory.heap.*
+import jcinterpret.core.memory.stack.Operator
 import jcinterpret.core.memory.stack.StackReference
 import jcinterpret.core.trace.EntryPointExecutionTraces
 import jcinterpret.core.trace.ExecutionTrace
@@ -49,7 +50,6 @@ class DynamicFeatureExtractor (
                 .filter { Files.isDirectory(it) && !Files.isHidden(it) }
                 .toList()
                 .sortedBy { it.fileName.toString() }
-                .take(10)
 
             println("Submitting trace jobs ...")
             val traceFutures = traceProjects.map { project ->
@@ -252,7 +252,9 @@ class DynamicFeatureExtractor (
         //
 
         val instanceLibraryMethodCalls = records.filterIsInstance<TraceRecord.InstanceLibraryMethodCall>()
+            .filter { it.method.declaringClassSignature.className.startsWith("java/") }
         val staticLibraryMethodCalls = records.filterIsInstance<TraceRecord.StaticLibraryMethodCall>()
+            .filter { it.method.declaringClassSignature.className.startsWith("java/") }
 
         val instanceByQSig = instanceLibraryMethodCalls.groupBy { it.method }
         val instanceBySig = instanceLibraryMethodCalls.groupBy { it.method.methodSignature }
@@ -608,7 +610,9 @@ class DynamicFeatureExtractor (
             return when (type) {
                 NodeType.VALUE -> "V"
                 NodeType.OBJECT -> "Ob"
-                NodeType.OPERATOR -> "Op"
+                NodeType.OPERATOR -> {
+                    "Op" + this.getAttribute<Operator>(NodeAttributeKeys.OPERATOR)
+                }
                 NodeType.ENTRYPOINT -> "E"
                 NodeType.METHODCALL -> "M"
             }

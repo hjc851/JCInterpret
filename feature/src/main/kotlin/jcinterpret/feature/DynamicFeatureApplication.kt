@@ -6,9 +6,13 @@ import jcinterpret.testconsole.features.featureset.FeatureSet
 import weka.core.converters.ArffLoader
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.time.Duration
+import java.time.Instant
+import java.util.*
 import java.util.concurrent.Executors
 
 fun main(args: Array<String>) {
+    val start = Instant.now()
     val traceRoot = Paths.get(args[0])
     val graphRoot = Paths.get(args[1])
 
@@ -17,13 +21,13 @@ fun main(args: Array<String>) {
     Files.deleteIfExists(featureOut)
     Files.createFile(featureOut)
 
-    val workpool = Executors.newFixedThreadPool(8)
-    val waitpool = Executors.newFixedThreadPool(4)
+    val workpool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())
+    val waitpool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()/2)
 
     try {
         FeatureSet().use { fs ->
             val extractor = DynamicFeatureExtractor(workpool, waitpool)
-            extractor.extract(traceRoot, graphRoot, fs, extractBranching = false, extractTrace = false, extractGraph = true)
+            extractor.extract(traceRoot, graphRoot, fs, extractBranching = false, extractTrace = true, extractGraph = true)
 
             println("Writing feature set ...")
             Files.newBufferedWriter(featureOut).use { out ->
@@ -43,6 +47,9 @@ fun main(args: Array<String>) {
     workpool.shutdownNow()
     waitpool.shutdownNow()
 
-    println("Finished")
+    val end = Instant.now()
+    val diff = Duration.between(start, end)
+
+    println("Finished in ${diff.seconds} seconds")
     System.exit(0)
 }
