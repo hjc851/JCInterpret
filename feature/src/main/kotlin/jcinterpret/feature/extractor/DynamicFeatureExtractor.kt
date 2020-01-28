@@ -139,14 +139,32 @@ class DynamicFeatureExtractor (
 
                         val allGraphFeatures = Collections.synchronizedList(mutableListOf<List<NumericFeature>>())
                         val traceCount = (fileCount - 1) / 5
-                        (0 until traceCount).map { i ->
-                            CompletableFuture.supplyAsync(Supplier {
-                                val graph = DocumentUtils.readObject(entryPoint.resolve("$i-taint.ser"), GraphSerializationAdapter::class).toGraph()
-                                val factor = (manifest.graphWeights["$i"] ?: 1).toDouble()
-                                val features = featuresForGraph(graph)
-                                features.forEach { it.scale(factor) }
-                                allGraphFeatures.add(features)
-                            }, workPool)
+                        (0 until traceCount).flatMap { i ->
+                            listOf(
+//                                CompletableFuture.supplyAsync(Supplier {
+//                                    val graph = DocumentUtils.readObject(entryPoint.resolve("$i-execgraph.ser"), GraphSerializationAdapter::class).toGraph()
+//                                    val factor = (manifest.graphWeights["$i"] ?: 1).toDouble()
+//                                    val features = featuresForGraph("EXEC_", graph)
+//                                    features.forEach { it.scale(factor) }
+//                                    allGraphFeatures.add(features)
+//                                }, workPool),
+
+                                CompletableFuture.supplyAsync(Supplier {
+                                    val graph = DocumentUtils.readObject(entryPoint.resolve("$i-taint.ser"), GraphSerializationAdapter::class).toGraph()
+                                    val factor = (manifest.graphWeights["$i"] ?: 1).toDouble()
+                                    val features = featuresForGraph("TAINT_", graph)
+                                    features.forEach { it.scale(factor) }
+                                    allGraphFeatures.add(features)
+                                }, workPool)
+
+//                                CompletableFuture.supplyAsync(Supplier {
+//                                    val graph = DocumentUtils.readObject(entryPoint.resolve("$i-scs.ser"), GraphSerializationAdapter::class).toGraph()
+//                                    val factor = (manifest.graphWeights["$i"] ?: 1).toDouble()
+//                                    val features = featuresForGraph("SCS_", graph)
+//                                    features.forEach { it.scale(factor) }
+//                                    allGraphFeatures.add(features)
+//                                }, workPool)
+                            )
                         }.forEach { it.get() }
 
                         val aggregatedGraphFeatures = aggregateFeatures(allGraphFeatures)
@@ -337,57 +355,65 @@ class DynamicFeatureExtractor (
 
         val heap = trace.heapArea
         val heapSize = heap.storage.size.toDouble()
-        val defaultStaticValues = records.filterIsInstance<TraceRecord.DefaultStaticFieldValue>()
+        val defaultStaticValues = trace.records.filterIsInstance<TraceRecord.DefaultStaticFieldValue>()
             .map { it.value }
             .toSet()
 
+        val defaultStaticRefs = defaultStaticValues.filterIsInstance<StackReference>()
+            .map { it.id }
+
+        val userHeap = heap.storage.filter { !defaultStaticRefs.contains(it.key) }
+            .toMap()
+
+        Unit
+
         // Total heap count
-//        features.add(NumericFeature("HEAP_COUNT", heap.storage.count()))
+//        features.add(NumericFeature("HEAP_COUNT", userHeap.count()))
 
         // Count of each non-boxed type
 //        features.addAll (
-//            NumericFeature("HEAP_CONCRETE_OBJECT_COUNT", heap.storage.values.count { it is ConcreteObject }),
-//            NumericFeature("HEAP_SYMBOLIC_OBJECT_COUNT", heap.storage.values.count { it is SymbolicObject }),
-//            NumericFeature("HEAP_ARRAY_OBJECT_COUNT", heap.storage.values.count { it is SymbolicArray }),
-//            NumericFeature("HEAP_CLASS_LIT_OBJECT_COUNT", heap.storage.values.count { it is ClassObject })
+//            NumericFeature("HEAP_CONCRETE_OBJECT_COUNT", userHeap.values.count { it is ConcreteObject }),
+//            NumericFeature("HEAP_SYMBOLIC_OBJECT_COUNT", userHeap.values.count { it is SymbolicObject }),
+//            NumericFeature("HEAP_ARRAY_OBJECT_COUNT", userHeap.values.count { it is SymbolicArray }),
+//            NumericFeature("HEAP_CLASS_LIT_OBJECT_COUNT", userHeap.values.count { it is ClassObject })
 //        )
 
         features.addAll (
-            NumericFeature("HEAP_CONCRETE_OBJECT_PERC", heap.storage.values.count { it is ConcreteObject } / heapSize),
-            NumericFeature("HEAP_SYMBOLIC_OBJECT_PERC", heap.storage.values.count { it is SymbolicObject } / heapSize),
-            NumericFeature("HEAP_ARRAY_OBJECT_PERC", heap.storage.values.count { it is SymbolicArray } / heapSize),
-            NumericFeature("HEAP_CLASS_LIT_OBJECT_PERC", heap.storage.values.count { it is ClassObject } / heapSize)
+            NumericFeature("HEAP_CONCRETE_OBJECT_PERC", userHeap.values.count { it is ConcreteObject } / heapSize),
+            NumericFeature("HEAP_SYMBOLIC_OBJECT_PERC", userHeap.values.count { it is SymbolicObject } / heapSize),
+            NumericFeature("HEAP_ARRAY_OBJECT_PERC", userHeap.values.count { it is SymbolicArray } / heapSize),
+            NumericFeature("HEAP_CLASS_LIT_OBJECT_PERC", userHeap.values.count { it is ClassObject } / heapSize)
         )
 
         // String
 //        features.addAll (
-//            NumericFeature("HEAP_STRING_COUNT", heap.storage.values.count { it is BoxedStringObject }),
-//            NumericFeature("HEAP_CONCRETE_STRING_COUNT", heap.storage.values.count { it is BoxedStringObject && it.value is ConcreteStringValue }),
-//            NumericFeature("HEAP_SYMBOLIC_STRING_COUNT", heap.storage.values.count { it is BoxedStringObject && it.value is SymbolicStringValue }),
-//            NumericFeature("HEAP_STRINGIFIED_STACK_VALUE_COUNT", heap.storage.values.count { it is BoxedStringObject && it.value is StackValueStringValue }),
-//            NumericFeature("HEAP_COMPOSITE_STACK_VALUE_COUNT", heap.storage.values.count { it is BoxedStringObject && it.value is CompositeStringValue })
+//            NumericFeature("HEAP_STRING_COUNT", userHeap.values.count { it is BoxedStringObject }),
+//            NumericFeature("HEAP_CONCRETE_STRING_COUNT", userHeap.values.count { it is BoxedStringObject && it.value is ConcreteStringValue }),
+//            NumericFeature("HEAP_SYMBOLIC_STRING_COUNT", userHeap.values.count { it is BoxedStringObject && it.value is SymbolicStringValue }),
+//            NumericFeature("HEAP_STRINGIFIED_STACK_VALUE_COUNT", userHeap.values.count { it is BoxedStringObject && it.value is StackValueStringValue }),
+//            NumericFeature("HEAP_COMPOSITE_STACK_VALUE_COUNT", userHeap.values.count { it is BoxedStringObject && it.value is CompositeStringValue })
 //        )
 
         features.addAll (
-            NumericFeature("HEAP_STRING_PERC", heap.storage.values.count { it is BoxedStringObject }),
-            NumericFeature("HEAP_CONCRETE_STRING_PERC", heap.storage.values.count { it is BoxedStringObject && it.value is ConcreteStringValue } / heapSize),
-            NumericFeature("HEAP_SYMBOLIC_STRING_PERC", heap.storage.values.count { it is BoxedStringObject && it.value is SymbolicStringValue } / heapSize),
-            NumericFeature("HEAP_STRINGIFIED_STACK_VALUE_PERC", heap.storage.values.count { it is BoxedStringObject && it.value is StackValueStringValue } / heapSize),
-            NumericFeature("HEAP_COMPOSITE_STACK_VALUE_PERC", heap.storage.values.count { it is BoxedStringObject && it.value is CompositeStringValue } / heapSize)
+            NumericFeature("HEAP_STRING_PERC", userHeap.values.count { it is BoxedStringObject }),
+            NumericFeature("HEAP_CONCRETE_STRING_PERC", userHeap.values.count { it is BoxedStringObject && it.value is ConcreteStringValue } / heapSize),
+            NumericFeature("HEAP_SYMBOLIC_STRING_PERC", userHeap.values.count { it is BoxedStringObject && it.value is SymbolicStringValue } / heapSize),
+            NumericFeature("HEAP_STRINGIFIED_STACK_VALUE_PERC", userHeap.values.count { it is BoxedStringObject && it.value is StackValueStringValue } / heapSize),
+            NumericFeature("HEAP_COMPOSITE_STACK_VALUE_PERC", userHeap.values.count { it is BoxedStringObject && it.value is CompositeStringValue } / heapSize)
         )
 
 
         // Boxed Value
-//        features.add(NumericFeature("HEAP_BOXED_COUNT", heap.storage.values.count { it is BoxedStackValueObject }))
+//        features.add(NumericFeature("HEAP_BOXED_COUNT", userHeap.values.count { it is BoxedStackValueObject }))
 //        features.addAll (
-//            heap.storage.values.filterIsInstance<BoxedStackValueObject>()
+//            userHeap.values.filterIsInstance<BoxedStackValueObject>()
 //                .groupBy { it.value.type }
 //                .map { NumericFeature("HEAP_BOXED_${it.key.name}_COUNT", it.value.size) }
 //        )
 
-        features.add(NumericFeature("HEAP_BOXED_PERC", heap.storage.values.count { it is BoxedStackValueObject } / heapSize))
+        features.add(NumericFeature("HEAP_BOXED_PERC", userHeap.values.count { it is BoxedStackValueObject } / heapSize))
         features.addAll (
-            heap.storage.values.filterIsInstance<BoxedStackValueObject>()
+            userHeap.values.filterIsInstance<BoxedStackValueObject>()
                 .groupBy { it.value.type }
                 .map { NumericFeature("HEAP_BOXED_${it.key.name}_PERC", it.value.size / heapSize) }
         )
@@ -395,7 +421,7 @@ class DynamicFeatureExtractor (
 
         // Objects of each type
 //        features.addAll (
-//            heap.storage.values.filterIsInstance<ConcreteObject>()
+//            userHeap.values.filterIsInstance<ConcreteObject>()
 //                .map { if (it.type.toString().contains("Ljava")) it.type else "_ReferenceType_" }
 //                .map { "HEAP_CONCRETE_OBJECT_${it}_COUNT" to it }
 //                .groupBy { it.first }
@@ -403,7 +429,7 @@ class DynamicFeatureExtractor (
 //        )
 
 //        features.addAll (
-//            heap.storage.values.filterIsInstance<SymbolicObject>()
+//            userHeap.values.filterIsInstance<SymbolicObject>()
 //                .filter { !defaultStaticValues.contains(it.ref()) }
 //                .map { if (it.type.toString().contains("Ljava")) it.type else "_ReferenceType_" }
 //                .map { "HEAP_SYMBOLIC_OBJECT_${it}_COUNT" to it }
@@ -412,7 +438,7 @@ class DynamicFeatureExtractor (
 //        )
 
 //        features.addAll (
-//            heap.storage.values.filterIsInstance<SymbolicArray>()
+//            userHeap.values.filterIsInstance<SymbolicArray>()
 //                .filter { !defaultStaticValues.contains(it.ref()) }
 //                .map { if (it.type.toString().contains("Ljava")) it.type else "_ReferenceType_" }
 //                .map { "HEAP_ARRAY_OBJECT_${it}_COUNT" to it }
@@ -421,7 +447,7 @@ class DynamicFeatureExtractor (
 //        )
 
         features.addAll (
-            heap.storage.values.filterIsInstance<ConcreteObject>()
+            userHeap.values.filterIsInstance<ConcreteObject>()
                 .map { if (it.type.toString().contains("Ljava")) it.type else "_ReferenceType_" }
                 .map { "HEAP_CONCRETE_OBJECT_${it}_PERC" to it }
                 .groupBy { it.first }
@@ -429,7 +455,7 @@ class DynamicFeatureExtractor (
         )
 
         features.addAll (
-            heap.storage.values.filterIsInstance<SymbolicObject>()
+            userHeap.values.filterIsInstance<SymbolicObject>()
                 .filter { !defaultStaticValues.contains(it.ref()) }
                 .map { if (it.type.toString().contains("Ljava")) it.type else "_ReferenceType_" }
                 .map { "HEAP_SYMBOLIC_OBJECT_${it}_PERC" to it }
@@ -438,7 +464,7 @@ class DynamicFeatureExtractor (
         )
 
         features.addAll (
-            heap.storage.values.filterIsInstance<SymbolicArray>()
+            userHeap.values.filterIsInstance<SymbolicArray>()
                 .filter { !defaultStaticValues.contains(it.ref()) }
                 .map { if (it.type.toString().contains("Ljava")) it.type else "_ReferenceType_" }
                 .map { "HEAP_ARRAY_OBJECT_${it}_PERC" to it }
@@ -460,7 +486,7 @@ class DynamicFeatureExtractor (
     Spans
      */
 
-    private fun featuresForGraph(graph: Graph): List<NumericFeature> {
+    private fun featuresForGraph(prefix: String, graph: Graph): List<NumericFeature> {
         val features = mutableListOf<NumericFeature>()
 
         //
@@ -490,51 +516,51 @@ class DynamicFeatureExtractor (
 
         // Raw Counts
 //        features.addAll(
-//            NumericFeature("GRAPH_NODE_TOTAL_COUNT", nodeCount),
+//            NumericFeature("${prefix}GRAPH_NODE_TOTAL_COUNT", nodeCount),
 //
-//            NumericFeature("GRAPH_NODE_OPERATOR_COUNT", operators.count()),
-//            NumericFeature("GRAPH_NODE_METHODCALL_COUNT", methodCalls.count()),
-//            NumericFeature("GRAPH_NODE_DATA_COUNT", data.count()),
+//            NumericFeature("${prefix}GRAPH_NODE_OPERATOR_COUNT", operators.count()),
+//            NumericFeature("${prefix}GRAPH_NODE_METHODCALL_COUNT", methodCalls.count()),
+//            NumericFeature("${prefix}GRAPH_NODE_DATA_COUNT", data.count()),
 //
-//            NumericFeature("GRAPH_NODE_DATA_OBJECTS_COUNT", objects.count()),
-//            NumericFeature("GRAPH_NODE_DATA_VALUES_COUNT", values.count()),
-//            NumericFeature("GRAPH_NODE_DATA_STRING_COUNT", strings.count()),
+//            NumericFeature("${prefix}GRAPH_NODE_DATA_OBJECTS_COUNT", objects.count()),
+//            NumericFeature("${prefix}GRAPH_NODE_DATA_VALUES_COUNT", values.count()),
+//            NumericFeature("${prefix}GRAPH_NODE_DATA_STRING_COUNT", strings.count()),
 //
-//            NumericFeature("GRAPH_NODE_DATA_SYMBOLIC_COUNT", symbolic.count()),
-//            NumericFeature("GRAPH_NODE_DATA_SYNTHETIC_COUNT", synthetic.count()),
-//            NumericFeature("GRAPH_NODE_DATA_CONCRETE_COUNT", concrete.count())
+//            NumericFeature("${prefix}GRAPH_NODE_DATA_SYMBOLIC_COUNT", symbolic.count()),
+//            NumericFeature("${prefix}GRAPH_NODE_DATA_SYNTHETIC_COUNT", synthetic.count()),
+//            NumericFeature("${prefix}GRAPH_NODE_DATA_CONCRETE_COUNT", concrete.count())
 //        )
 
         // Percentages
         features.addAll(
-            NumericFeature("GRAPH_NODE_OPERATORS_PERC", operators.count() / nodeCount),
-            NumericFeature("GRAPH_NODE_METHODCALL_PERC", methodCalls.count() / nodeCount),
-            NumericFeature("GRAPH_NODE_DATA_PERC", data.count() / nodeCount),
+            NumericFeature("${prefix}GRAPH_NODE_OPERATORS_PERC", operators.count() / nodeCount),
+            NumericFeature("${prefix}GRAPH_NODE_METHODCALL_PERC", methodCalls.count() / nodeCount),
+            NumericFeature("${prefix}GRAPH_NODE_DATA_PERC", data.count() / nodeCount),
 
-            NumericFeature("GRAPH_NODE_DATA_OBJECT_PERC", objects.count() / datacount),
-            NumericFeature("GRAPH_NODE_DATA_VALUE_PERC", values.count() / datacount),
-            NumericFeature("GRAPH_NODE_DATA_STRING_PERC", strings.count() / datacount),
+            NumericFeature("${prefix}GRAPH_NODE_DATA_OBJECT_PERC", objects.count() / datacount),
+            NumericFeature("${prefix}GRAPH_NODE_DATA_VALUE_PERC", values.count() / datacount),
+            NumericFeature("${prefix}GRAPH_NODE_DATA_STRING_PERC", strings.count() / datacount),
 
-            NumericFeature("GRAPH_NODE_DATA_SYMBOLIC_PERC", symbolic.count() / datacount),
-            NumericFeature("GRAPH_NODE_DATA_SYNTHETIC_PERC", synthetic.count() / datacount),
-            NumericFeature("GRAPH_NODE_DATA_CONCRETE_PERC", concrete.count() / datacount)
+            NumericFeature("${prefix}GRAPH_NODE_DATA_SYMBOLIC_PERC", symbolic.count() / datacount),
+            NumericFeature("${prefix}GRAPH_NODE_DATA_SYNTHETIC_PERC", synthetic.count() / datacount),
+            NumericFeature("${prefix}GRAPH_NODE_DATA_CONCRETE_PERC", concrete.count() / datacount)
         )
 
         // Ratios
         features.addAll(
-            NumericFeature("GRAPH_NODE_DATA_RATIO_OBJECT_VALUE", objectcount / valuecount),
-            NumericFeature("GRAPH_NODE_DATA_RATIO_OBJECT_STRING", objectcount / stringcount),
-            NumericFeature("GRAPH_NODE_DATA_RATIO_VALUE_OBJECT", valuecount / objectcount),
-            NumericFeature("GRAPH_NODE_DATA_RATIO_VALUE_STRING", valuecount / stringcount),
-            NumericFeature("GRAPH_NODE_DATA_RATIO_STRING_OBJECT", stringcount / objectcount),
-            NumericFeature("GRAPH_NODE_DATA_RATIO_STRING_VALUE", stringcount / valuecount),
+            NumericFeature("${prefix}GRAPH_NODE_DATA_RATIO_OBJECT_VALUE", objectcount / valuecount),
+            NumericFeature("${prefix}GRAPH_NODE_DATA_RATIO_OBJECT_STRING", objectcount / stringcount),
+            NumericFeature("${prefix}GRAPH_NODE_DATA_RATIO_VALUE_OBJECT", valuecount / objectcount),
+            NumericFeature("${prefix}GRAPH_NODE_DATA_RATIO_VALUE_STRING", valuecount / stringcount),
+            NumericFeature("${prefix}GRAPH_NODE_DATA_RATIO_STRING_OBJECT", stringcount / objectcount),
+            NumericFeature("${prefix}GRAPH_NODE_DATA_RATIO_STRING_VALUE", stringcount / valuecount),
 
-            NumericFeature("GRAPH_NODE_DATA_RATIO_SYMBOLIC_SYNTHETIC", symboliccount / syntheticcount),
-            NumericFeature("GRAPH_NODE_DATA_RATIO_SYMBOLIC_CONCRETE", symboliccount / concretecount),
-            NumericFeature("GRAPH_NODE_DATA_RATIO_SYNTHETIC_SYMBOLIC", syntheticcount / symboliccount),
-            NumericFeature("GRAPH_NODE_DATA_RATIO_SYNTHETIC_CONCRETE", syntheticcount / concretecount),
-            NumericFeature("GRAPH_NODE_DATA_RATIO_CONCRETE_SYMBOLIC", concretecount / symboliccount),
-            NumericFeature("GRAPH_NODE_DATA_RATIO_CONCRETE_SYNTHETIC", concretecount / syntheticcount)
+            NumericFeature("${prefix}GRAPH_NODE_DATA_RATIO_SYMBOLIC_SYNTHETIC", symboliccount / syntheticcount),
+            NumericFeature("${prefix}GRAPH_NODE_DATA_RATIO_SYMBOLIC_CONCRETE", symboliccount / concretecount),
+            NumericFeature("${prefix}GRAPH_NODE_DATA_RATIO_SYNTHETIC_SYMBOLIC", syntheticcount / symboliccount),
+            NumericFeature("${prefix}GRAPH_NODE_DATA_RATIO_SYNTHETIC_CONCRETE", syntheticcount / concretecount),
+            NumericFeature("${prefix}GRAPH_NODE_DATA_RATIO_CONCRETE_SYMBOLIC", concretecount / symboliccount),
+            NumericFeature("${prefix}GRAPH_NODE_DATA_RATIO_CONCRETE_SYNTHETIC", concretecount / syntheticcount)
         )
 
         //
@@ -557,50 +583,50 @@ class DynamicFeatureExtractor (
 
         // raw counts
 //        features.addAll(
-//            NumericFeature("GRAPH_EDGE_TOTAL_COUNT", edgeCount),
+//            NumericFeature("${prefix}GRAPH_EDGE_TOTAL_COUNT", edgeCount),
 //
-//            NumericFeature("GRAPH_EDGE_TRANSFORMATION_COUNT", transformationcount),
-//            NumericFeature("GRAPH_EDGE_AGGREGATION_COUNT", aggregationcount),
-//            NumericFeature("GRAPH_EDGE_PARAMETER_COUNT", parametercount),
-//            NumericFeature("GRAPH_EDGE_SCOPE_COUNT", scopecount),
-//            NumericFeature("GRAPH_EDGE_SUPPLIES_COUNT", suppliescount)
+//            NumericFeature("${prefix}GRAPH_EDGE_TRANSFORMATION_COUNT", transformationcount),
+//            NumericFeature("${prefix}GRAPH_EDGE_AGGREGATION_COUNT", aggregationcount),
+//            NumericFeature("${prefix}GRAPH_EDGE_PARAMETER_COUNT", parametercount),
+//            NumericFeature("${prefix}GRAPH_EDGE_SCOPE_COUNT", scopecount),
+//            NumericFeature("${prefix}GRAPH_EDGE_SUPPLIES_COUNT", suppliescount)
 //        )
 
         // percentages
         features.addAll(
-            NumericFeature("GRAPH_EDGE_TRANSFORMATION_PERC", transformationcount / edgeCount),
-            NumericFeature("GRAPH_EDGE_AGGREGATION_PERC", aggregationcount / edgeCount),
-            NumericFeature("GRAPH_EDGE_PARAMETER_PERC", parametercount / edgeCount),
-            NumericFeature("GRAPH_EDGE_SCOPE_PERC", scopecount / edgeCount),
-            NumericFeature("GRAPH_EDGE_SUPPLIES_PERC", suppliescount / edgeCount)
+            NumericFeature("${prefix}GRAPH_EDGE_TRANSFORMATION_PERC", transformationcount / edgeCount),
+            NumericFeature("${prefix}GRAPH_EDGE_AGGREGATION_PERC", aggregationcount / edgeCount),
+            NumericFeature("${prefix}GRAPH_EDGE_PARAMETER_PERC", parametercount / edgeCount),
+            NumericFeature("${prefix}GRAPH_EDGE_SCOPE_PERC", scopecount / edgeCount),
+            NumericFeature("${prefix}GRAPH_EDGE_SUPPLIES_PERC", suppliescount / edgeCount)
         )
 
         // ratios
         features.addAll(
-            NumericFeature("GRAPH_EDGE_RATIO_TRANSFORMATION_AGGREGATION", transformationcount / aggregationcount),
-            NumericFeature("GRAPH_EDGE_RATIO_TRANSFORMATION_PARAMETER", transformationcount / parametercount),
-            NumericFeature("GRAPH_EDGE_RATIO_TRANSFORMATION_SCOPE", transformationcount / scopecount),
-            NumericFeature("GRAPH_EDGE_RATIO_TRANSFORMATION_SUPPLIES", transformationcount / suppliescount),
+            NumericFeature("${prefix}GRAPH_EDGE_RATIO_TRANSFORMATION_AGGREGATION", transformationcount / aggregationcount),
+            NumericFeature("${prefix}GRAPH_EDGE_RATIO_TRANSFORMATION_PARAMETER", transformationcount / parametercount),
+            NumericFeature("${prefix}GRAPH_EDGE_RATIO_TRANSFORMATION_SCOPE", transformationcount / scopecount),
+            NumericFeature("${prefix}GRAPH_EDGE_RATIO_TRANSFORMATION_SUPPLIES", transformationcount / suppliescount),
 
-            NumericFeature("GRAPH_EDGE_RATIO_AGGREGATION_TRANSFORMATION", aggregationcount / transformationcount),
-            NumericFeature("GRAPH_EDGE_RATIO_AGGREGATION_PARAMETER", aggregationcount / parametercount),
-            NumericFeature("GRAPH_EDGE_RATIO_AGGREGATION_SCOPE", aggregationcount / scopecount),
-            NumericFeature("GRAPH_EDGE_RATIO_AGGREGATION_SUPPLIES", aggregationcount / suppliescount),
+            NumericFeature("${prefix}GRAPH_EDGE_RATIO_AGGREGATION_TRANSFORMATION", aggregationcount / transformationcount),
+            NumericFeature("${prefix}GRAPH_EDGE_RATIO_AGGREGATION_PARAMETER", aggregationcount / parametercount),
+            NumericFeature("${prefix}GRAPH_EDGE_RATIO_AGGREGATION_SCOPE", aggregationcount / scopecount),
+            NumericFeature("${prefix}GRAPH_EDGE_RATIO_AGGREGATION_SUPPLIES", aggregationcount / suppliescount),
 
-            NumericFeature("GRAPH_EDGE_RATIO_PARAMETER_TRANSFORMATION", parametercount / transformationcount),
-            NumericFeature("GRAPH_EDGE_RATIO_PARAMETER_AGGREGATION", parametercount / aggregationcount),
-            NumericFeature("GRAPH_EDGE_RATIO_PARAMETER_SCOPE", parametercount / scopecount),
-            NumericFeature("GRAPH_EDGE_RATIO_PARAMETER_SUPPLIES", parametercount / suppliescount),
+            NumericFeature("${prefix}GRAPH_EDGE_RATIO_PARAMETER_TRANSFORMATION", parametercount / transformationcount),
+            NumericFeature("${prefix}GRAPH_EDGE_RATIO_PARAMETER_AGGREGATION", parametercount / aggregationcount),
+            NumericFeature("${prefix}GRAPH_EDGE_RATIO_PARAMETER_SCOPE", parametercount / scopecount),
+            NumericFeature("${prefix}GRAPH_EDGE_RATIO_PARAMETER_SUPPLIES", parametercount / suppliescount),
 
-            NumericFeature("GRAPH_EDGE_RATIO_SCOPE_TRANSFORMATION", scopecount / transformationcount),
-            NumericFeature("GRAPH_EDGE_RATIO_SCOPE_AGGREGATION", scopecount / aggregationcount),
-            NumericFeature("GRAPH_EDGE_RATIO_SCOPE_PARAMETER", scopecount / parametercount),
-            NumericFeature("GRAPH_EDGE_RATIO_SCOPE_SUPPLIES", scopecount / suppliescount),
+            NumericFeature("${prefix}GRAPH_EDGE_RATIO_SCOPE_TRANSFORMATION", scopecount / transformationcount),
+            NumericFeature("${prefix}GRAPH_EDGE_RATIO_SCOPE_AGGREGATION", scopecount / aggregationcount),
+            NumericFeature("${prefix}GRAPH_EDGE_RATIO_SCOPE_PARAMETER", scopecount / parametercount),
+            NumericFeature("${prefix}GRAPH_EDGE_RATIO_SCOPE_SUPPLIES", scopecount / suppliescount),
 
-            NumericFeature("GRAPH_EDGE_RATIO_SUPPLIES_TRANSFORMATION", suppliescount / transformationcount),
-            NumericFeature("GRAPH_EDGE_RATIO_SUPPLIES_AGGREGATION", suppliescount / aggregationcount),
-            NumericFeature("GRAPH_EDGE_RATIO_SUPPLIES_PARAMETER", suppliescount / parametercount),
-            NumericFeature("GRAPH_EDGE_RATIO_SUPPLIES_SCOPE", suppliescount / scopecount)
+            NumericFeature("${prefix}GRAPH_EDGE_RATIO_SUPPLIES_TRANSFORMATION", suppliescount / transformationcount),
+            NumericFeature("${prefix}GRAPH_EDGE_RATIO_SUPPLIES_AGGREGATION", suppliescount / aggregationcount),
+            NumericFeature("${prefix}GRAPH_EDGE_RATIO_SUPPLIES_PARAMETER", suppliescount / parametercount),
+            NumericFeature("${prefix}GRAPH_EDGE_RATIO_SUPPLIES_SCOPE", suppliescount / scopecount)
         )
 
         //
@@ -675,8 +701,8 @@ class DynamicFeatureExtractor (
 
         val communitySize = communities.map { it.value }.sum().toDouble()
         communities.forEach {
-//            features.add(NumericFeature("GRAPH_COMMUNITIES_${it.key}_COUNT", it.value))
-            features.add(NumericFeature("GRAPH_COMMUNITIES_${it.key}_PERC", it.value / communitySize))
+//            features.add(NumericFeature("${prefix}GRAPH_COMMUNITIES_${it.key}_COUNT", it.value))
+            features.add(NumericFeature("${prefix}GRAPH_COMMUNITIES_${it.key}_PERC", it.value / communitySize))
         }
 
         //
@@ -686,7 +712,7 @@ class DynamicFeatureExtractor (
         for (feature in features)
             if (feature.value == Double.NaN || feature.value == Double.NEGATIVE_INFINITY || feature.value == Double.POSITIVE_INFINITY)
                 feature.value = 0.0
-
+        
         return features
     }
 
