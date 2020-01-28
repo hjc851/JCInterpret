@@ -16,6 +16,7 @@ import jcinterpret.graph.execution.NodeAttributeKeys
 import jcinterpret.graph.execution.NodeType
 import jcinterpret.graph.serialization.GraphSerializationAdapter
 import jcinterpret.graph.serialization.toGraph
+import jcinterpret.signature.*
 import jcinterpret.testconsole.features.featureset.FeatureSet
 import jcinterpret.testconsole.features.featureset.NumericFeature
 import jcinterpret.testconsole.pipeline.GraphManifest
@@ -175,6 +176,7 @@ class DynamicFeatureExtractor (
         val features = mutableListOf<NumericFeature>()
 
         val records = trace.records
+            .filter { it !is TraceRecord.DefaultStaticFieldValue }
 
         //
         //  NGrams
@@ -608,13 +610,28 @@ class DynamicFeatureExtractor (
         fun Node.key(): String {
             val type = this.getAttribute<NodeType>(NodeAttributeKeys.NODETYPE)
             return when (type) {
-                NodeType.VALUE -> "V"
-                NodeType.OBJECT -> "Ob"
+                NodeType.ENTRYPOINT -> "E"
+
+                NodeType.VALUE -> {
+                    "V" + this.getAttribute<TypeSignature>(NodeAttributeKeys.TYPE)
+                }
+
+                NodeType.OBJECT -> {
+                    val type = this.getAttribute<TypeSignature>(NodeAttributeKeys.TYPE)
+                    val sig = if (type is ReferenceTypeSignature)
+                        if (type.toString().contains("Ljava")) type.toString() else "_REFERENCETYPE"
+                    else type.toString()
+
+                    "O" + sig
+                }
+
                 NodeType.OPERATOR -> {
                     "Op" + this.getAttribute<Operator>(NodeAttributeKeys.OPERATOR)
                 }
-                NodeType.ENTRYPOINT -> "E"
-                NodeType.METHODCALL -> "M"
+
+                NodeType.METHODCALL -> {
+                    "M" + this.getAttribute<QualifiedMethodSignature>(NodeAttributeKeys.METHODSIGNATURE).methodSignature
+                }
             }
         }
 
@@ -707,8 +724,8 @@ class DynamicFeatureExtractor (
             val stddev = scores.stddev() ?: 0.0
             val variance = scores.variance() ?: 0.0
 
-            reducedFeatures.add(NumericFeature("${featureName}_MIN", min))
-            reducedFeatures.add(NumericFeature("${featureName}_MAX", max))
+//            reducedFeatures.add(NumericFeature("${featureName}_MIN", min))
+//            reducedFeatures.add(NumericFeature("${featureName}_MAX", max))
             reducedFeatures.add(NumericFeature("${featureName}_AVG", avg))
 //            reducedFeatures.add(NumericFeature("${featureName}_MEDIAN", median))
 //            reducedFeatures.add(NumericFeature("${featureName}_STDDEV", stddev))
@@ -757,23 +774,25 @@ object TraceRecordCodeVisitor: TraceRecord.Visitor<Stack<String>>() {
     }
 
     override fun visit(record: TraceRecord.EntryParameter, arg: Stack<String>) {
-        arg.push("Ep")
+        arg.push("Ep${record.ref.type}")
     }
 
     override fun visit(record: TraceRecord.StaticLibraryMethodCall, arg: Stack<String>) {
-        arg.push("Sm")
+        arg.push("Sm${record.method}")
     }
 
     override fun visit(record: TraceRecord.InstanceLibraryMethodCall, arg: Stack<String>) {
-        arg.push("Im")
+        arg.push("Im${record.method.methodSignature}")
     }
 
     override fun visit(record: TraceRecord.SynthesisedReturnValue, arg: Stack<String>) {
-        arg.push("Xr")
+        arg.push("Xr${record.result.type}")
     }
 
-    override fun visit(record: TraceRecord.StaticFieldPut, arg: Stack<String>) {
-        arg.push("Sp")
+    override fun visit(record: TraceRecord.StaticFieldPut, arg: Stack<String>)
+    {
+        val type = if (record.staticType.toString().contains("Ljava")) record.staticType.toString() else "_REFERENCETYPE"
+        arg.push("Sp$type")
     }
 
     override fun visit(record: TraceRecord.ObjectFieldPut, arg: Stack<String>) {
@@ -793,11 +812,11 @@ object TraceRecordCodeVisitor: TraceRecord.Visitor<Stack<String>>() {
     }
 
     override fun visit(record: TraceRecord.DefaultStaticFieldValue, arg: Stack<String>) {
-        arg.push("Ds")
+        arg.push("Ds${record.type.className}")
     }
 
     override fun visit(record: TraceRecord.StackTransformation, arg: Stack<String>) {
-        arg.push("St")
+        arg.push("St${record.lhs.type}${record.rhs.type}${record.operator}${record.result.type}")
     }
 
     override fun visit(record: TraceRecord.NotValueTransformation, arg: Stack<String>) {
@@ -805,7 +824,7 @@ object TraceRecordCodeVisitor: TraceRecord.Visitor<Stack<String>>() {
     }
 
     override fun visit(record: TraceRecord.StackCast, arg: Stack<String>) {
-        arg.push("Sc")
+        arg.push("Sc${record.lhs.type}${record.rhs.type}")
     }
 
     override fun visit(record: TraceRecord.StringConcat, arg: Stack<String>) {
@@ -813,7 +832,7 @@ object TraceRecordCodeVisitor: TraceRecord.Visitor<Stack<String>>() {
     }
 
     override fun visit(record: TraceRecord.Stringification, arg: Stack<String>) {
-        arg.push("Stf")
+        arg.push("Stf${record.value.type}")
     }
 
     override fun visit(record: TraceRecord.Assertion, arg: Stack<String>) {
@@ -825,8 +844,13 @@ object TraceRecordCodeVisitor: TraceRecord.Visitor<Stack<String>>() {
     }
 
     override fun visit(record: TraceRecord.UncaughtException, arg: Stack<String>) {
-        arg.push("Ue")
+        arg.push("Ue${record.type.keySig()}")
     }
+}
+
+fun ClassTypeSignature.keySig(): String {
+    if (this.className.contains("Ljava")) return this.toString()
+    else return "_REFERENCETYPE"
 }
 
 fun <T> MutableList<T>.addAll(vararg items: T) = this.addAll(items)
