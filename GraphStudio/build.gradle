@@ -49,6 +49,9 @@ compileTestKotlin {
 }
 
 apply plugin: 'com.github.johnrengelman.shadow'
+shadowJar {
+    zip64 true
+}
 
 jar {
     manifest {

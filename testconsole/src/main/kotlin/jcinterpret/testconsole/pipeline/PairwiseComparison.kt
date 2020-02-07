@@ -1,10 +1,19 @@
 package jcinterpret.testconsole.pipeline
 
 import jcinterpret.testconsole.pipeline.comparison.ProcessedProjectComparator
+import jcinterpret.testconsole.utils.ProjectModel
 import jcinterpret.testconsole.utils.ProjectModelBuilder
+import java.lang.StringBuilder
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
+import java.util.concurrent.Executors
+import java.util.stream.IntStream
 import kotlin.streams.toList
+
+val ROOT_POOL = Executors.newFixedThreadPool(8)
 
 fun main(args: Array<String>) {
     ProcessedProjectComparator.TAINT_MATCH_THRESHOLD = 0.8
@@ -17,33 +26,40 @@ fun main(args: Array<String>) {
         .sortedBy { it.fileName.toString() }
         .map(ProjectModelBuilder::build)
 
-    val sims = mutableMapOf<String, MutableMap<String, Double>>()
+    val sims = ConcurrentHashMap<String, ConcurrentHashMap<String, Double>>()
+    val futures = mutableListOf<CompletableFuture<Void>>()
 
-    for (l in 0 until projects.size) {
+    IntStream.range(0, projects.size).forEach { l ->
         val lhs = projects[l]
         val lid = lhs.projectId
 
-        for (r in l+1 until projects.size) {
+        IntStream.range(l+1, projects.size).forEach { r ->
             val rhs = projects[r]
             val rid = rhs.projectId
 
-            println("Comparing $lid vs $rid")
-            val result = ProcessedProjectComparator.compare(lhs, rhs)
+            val f = CompletableFuture.runAsync (Runnable {
+                val result = ProcessedProjectComparator.compare(lhs, rhs)
 
-            val (
-                _lhs, _rhs,
-                lsim, rsim
-            ) = result
+                val (
+                    _lhs, _rhs,
+                    lsim, rsim
+                ) = result
 
-            println("LSIM: $lsim")
-            println("RSIM: $rsim")
+                val out = StringBuilder()
+                out.appendln("Comparing ${lid} vs ${rid}")
+                out.appendln("LSIM: ${lsim}")
+                out.appendln("RSIM: ${rsim}")
+                println(out.toString())
 
-            sims.getOrPut(lid) { mutableMapOf() }.put(rid, lsim)
-            sims.getOrPut(rid) { mutableMapOf() }.put(lid, rsim)
+                sims.getOrPut(lid) { ConcurrentHashMap() }.put(rid, lsim)
+                sims.getOrPut(rid) { ConcurrentHashMap() }.put(lid, rsim)
+            }, ROOT_POOL)
 
-            println()
+            futures.add(f)
         }
     }
+
+    for (future in futures) future.get()
 
     val groupKeys = sims.keys
         .groupBy { it.split("_")[0] }
