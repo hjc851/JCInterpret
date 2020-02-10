@@ -13,7 +13,7 @@ import java.util.concurrent.Executors
 import java.util.stream.IntStream
 import kotlin.streams.toList
 
-val ROOT_POOL = Executors.newFixedThreadPool(12)
+val ROOT_POOL = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()/2)
 
 fun main(args: Array<String>) {
     ProcessedProjectComparator.TAINT_MATCH_THRESHOLD = 0.8

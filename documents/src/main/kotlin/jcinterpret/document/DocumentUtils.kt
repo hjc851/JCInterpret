@@ -1,5 +1,7 @@
 package jcinterpret.document
 
+import com.caucho.hessian.io.HessianSerializerInput
+import com.caucho.hessian.io.HessianSerializerOutput
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
@@ -28,8 +30,8 @@ object DocumentUtils {
 
     fun <T: Serializable> readObject(path: Path, type: KClass<T>): T {
         val fin = Files.newInputStream(path)
-        val oin = ObjectInputStream(fin)
-        val obj = oin.readObject() as T
+        val oin = HessianSerializerInput(fin)
+        val obj = oin.readObject(type.java)
         oin.close()
         fin.close()
         return type.cast(obj)
@@ -37,9 +39,26 @@ object DocumentUtils {
 
     fun <T: Serializable> writeObject(path: Path, document: T) {
         val fout = Files.newOutputStream(path)
-        val oout = ObjectOutputStream(fout)
+        val oout = HessianSerializerOutput(fout)
         oout.writeObject(document)
         oout.close()
         fout.close()
     }
+
+//    fun <T: Serializable> readObject(path: Path, type: KClass<T>): T {
+//        val fin = Files.newInputStream(path)
+//        val oin = ObjectInputStream(fin)
+//        val obj = oin.readObject() as T
+//        oin.close()
+//        fin.close()
+//        return type.cast(obj)
+//    }
+//
+//    fun <T: Serializable> writeObject(path: Path, document: T) {
+//        val fout = Files.newOutputStream(path)
+//        val oout = ObjectOutputStream(fout)
+//        oout.writeObject(document)
+//        oout.close()
+//        fout.close()
+//    }
 }
