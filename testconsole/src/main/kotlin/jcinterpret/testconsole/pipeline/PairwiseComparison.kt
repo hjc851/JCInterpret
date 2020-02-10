@@ -13,12 +13,13 @@ import java.util.concurrent.Executors
 import java.util.stream.IntStream
 import kotlin.streams.toList
 
-val ROOT_POOL = Executors.newFixedThreadPool(8)
+val ROOT_POOL = Executors.newFixedThreadPool(12)
 
 fun main(args: Array<String>) {
     ProcessedProjectComparator.TAINT_MATCH_THRESHOLD = 0.8
 
     val root = Paths.get(args[0])
+    val out = Files.newBufferedWriter(Paths.get(args[1]))
 
     val projects = Files.list(root)
         .filter { Files.isDirectory(it) && !Files.isHidden(it) }
@@ -49,7 +50,9 @@ fun main(args: Array<String>) {
                 out.appendln("Comparing ${lid} vs ${rid}")
                 out.appendln("LSIM: ${lsim}")
                 out.appendln("RSIM: ${rsim}")
+
                 println(out.toString())
+                out.appendln(out)
 
                 sims.getOrPut(lid) { ConcurrentHashMap() }.put(rid, lsim)
                 sims.getOrPut(rid) { ConcurrentHashMap() }.put(lid, rsim)
