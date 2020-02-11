@@ -19,7 +19,7 @@ fun main(args: Array<String>) {
     ProcessedProjectComparator.TAINT_MATCH_THRESHOLD = 0.8
 
     val root = Paths.get(args[0])
-    val out = Files.newBufferedWriter(Paths.get(args[1]))
+    val fout = Files.newBufferedWriter(Paths.get(args[1]))
 
     val projects = Files.list(root)
         .filter { Files.isDirectory(it) && !Files.isHidden(it) }
@@ -52,7 +52,7 @@ fun main(args: Array<String>) {
                 out.appendln("RSIM: ${rsim}")
 
                 println(out.toString())
-                out.appendln(out)
+                fout.appendln(out)
 
                 sims.getOrPut(lid) { ConcurrentHashMap() }.put(rid, lsim)
                 sims.getOrPut(rid) { ConcurrentHashMap() }.put(lid, rsim)
@@ -83,4 +83,6 @@ fun main(args: Array<String>) {
 
     println()
     println("Finished")
+
+    System.exit(0)
 }

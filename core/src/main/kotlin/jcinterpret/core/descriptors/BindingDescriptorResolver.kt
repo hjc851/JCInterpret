@@ -19,7 +19,8 @@ class BindingDescriptorResolver (
 
     private inner class Visitor : ASTVisitor() {
         override fun visit(type: TypeDeclaration): Boolean {
-            val desc = TypeBindingClassTypeDescriptor(type.resolveBinding())
+            val binding = type.resolveBinding()
+            val desc = TypeBindingClassTypeDescriptor(binding)
             classes[desc.signature] = desc
             return true
         }

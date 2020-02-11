@@ -78,6 +78,7 @@ fun main(args: Array<String>) {
 
         if (msg.isNotEmpty()) {
             println("Ignoring $id")
+            msg.forEach { println("\t${it.startPosition}:${it.length} ${it.message}") }
             return@mapNotNull null
         }
 
@@ -102,8 +103,7 @@ fun main(args: Array<String>) {
     val f = mutableListOf<CompletableFuture<Void>>()
 
     println("Generating Execution Traces")
-    projects
-        .forEach { project ->
+    projects.forEach { project ->
         try {
             println("Executing ${project.id}")
             val result = project.entries.map { entry ->
@@ -125,11 +125,9 @@ fun main(args: Array<String>) {
                 System.err.println("WARNING: NO TRACES FOR ${project.id}")
 
             println("\tSaving... ${project.id} at ${Date()}")
-            f.add(
+            f.add (
                 CompletableFuture.runAsync {
                     for ((entry, traces) in result) {
-//                        println("\t\t${entry.binding.qualifiedSignature()}: ${traces.size} traces")
-
                         val msig = entry.binding.qualifiedSignature()
                         val fout = projDir.resolve(msig.toString().replace("/", ".") + ".ser")
                         Files.createFile(fout)
@@ -154,8 +152,7 @@ fun main(args: Array<String>) {
     }
 
     println("Finishing writing to disk ...")
-    CompletableFuture.allOf(*f.filterNot { it.isDone }.toTypedArray())
-        .get()
+    f.forEach { it.get() }
 
     println("Finished")
 }

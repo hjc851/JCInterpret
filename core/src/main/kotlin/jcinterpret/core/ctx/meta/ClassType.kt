@@ -33,6 +33,12 @@ class ClassType(
     fun resolveVirtualMethod(sig: MethodSignature): Method = try {
         tryResolveVirtualMethod(sig)!!
     } catch (e: Exception) {
+        System.err.println("Cannot resolve ${sig}")
+        e.printStackTrace()
+
+        val spr = this.classArea.getClass(this.descriptor.superclass!!)
+        val ifaces = this.descriptor.interfaces.map { this.classArea.getClass(it) }
+
         throw e
     }
 
@@ -43,10 +49,12 @@ class ClassType(
 
         for (iface in descriptor.interfaces) {
             val ifacedesc = classArea.getClass(iface)
-            if (ifacedesc.virtualMethods.containsKey(sigstr)) {
-                val method = ifacedesc.virtualMethods[sigstr]!!
-                return method
-            }
+            val method = ifacedesc.tryResolveVirtualMethod(sig)
+            if (method != null) return method
+//            if (ifacedesc.virtualMethods.containsKey(sigstr)) {
+//                val method = ifacedesc.virtualMethods[sigstr]!!
+//                return method
+//            }
         }
 
         val sclasssig = descriptor.superclass

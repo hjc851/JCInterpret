@@ -8,6 +8,7 @@ import jcinterpret.core.memory.stack.StackInt
 import jcinterpret.signature.ClassTypeSignature
 import jcinterpret.signature.PrimitiveTypeSignature
 import org.eclipse.jdt.core.dom.*
+import kotlin.math.exp
 
 class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
 
@@ -126,7 +127,9 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
     // TODO There is a problem when using a continue statement in a for loop
     // The scope declaring the initialiser variables is destroyed
     override fun visit(node: ForStatement): Boolean {
-        val instr = for_loop(node.expression, node.body, node.updaters() as MutableList<Expression>)
+
+        val expr = node.expression ?: node.ast.newBooleanLiteral(true)
+        val instr = for_loop(expr, node.body, node.updaters() as MutableList<Expression>)
 
         val instructionSize = frame.instructions.size
         val operandsSize = frame.operands.size
@@ -136,7 +139,7 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
         push(break_pop)
         push(continue_pop)
         push(instr)
-        add(node.expression)
+        add(expr)
         push(continue_push(null, instr, StackBoolean(true), 2))
         node.initializers().reversed().forEach { (it as ASTNode).accept(this) }
         push(break_push(null, instructionSize, operandsSize, localDepth))
@@ -349,6 +352,13 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
 
     override fun visit(node: MethodInvocation): Boolean {
         val binding = node.resolveMethodBinding()
+
+        if (binding.typeArguments.isNotEmpty() || binding.typeParameters.isNotEmpty())
+            Unit
+
+        if (binding.declaringClass.qualifiedName.contains("Dequeue"))
+            Unit
+
         val qsig = binding.qualifiedSignature()
 
         val isStatic = Modifier.isStatic(binding.modifiers)
@@ -598,6 +608,12 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
                 add(node.leftHandSide)
             }
 
+            Assignment.Operator.BIT_AND_ASSIGN -> {
+                push(and)
+                add(node.rightHandSide)
+                add(node.leftHandSide)
+            }
+
             else -> TODO()
         }
 
@@ -765,7 +781,14 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
     }
 
     override fun visit(node: SuperFieldAccess): Boolean {
-        TODO()
+        if (node.qualifier != null) throw NotImplementedError("qualified super field access not implemented")
+
+        val binding = node.resolveFieldBinding()
+
+        push(obj_get(binding.name, binding.type.signature()))
+        push(load("this"))
+
+        return false
     }
 
     override fun visit(node: SimpleName): Boolean {
