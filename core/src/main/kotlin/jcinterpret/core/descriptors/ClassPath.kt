@@ -2,6 +2,7 @@ package jcinterpret.core.descriptors
 
 import com.sun.tools.classfile.ClassFile
 import com.sun.tools.jdeps.ClassFileReader
+import java.lang.Exception
 import java.nio.file.Path
 
 class ClassPath(val readers: List<ClassFileReader>) {

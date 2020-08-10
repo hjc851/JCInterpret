@@ -903,7 +903,7 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
     }
 
     override fun visit(node: CharacterLiteral): Boolean {
-        push(ldc_char(node.charValue()))
+        push(ldc_char(node.escapedValue.first()))
         return false
     }
 
@@ -918,7 +918,7 @@ class ASTDecoder(val frame: InterpretedExecutionFrame): ASTVisitor() {
     }
 
     override fun visit(node: StringLiteral): Boolean {
-        push(ldc_string(node.literalValue))
+        push(ldc_string(node.escapedValue))
         return false
     }
 

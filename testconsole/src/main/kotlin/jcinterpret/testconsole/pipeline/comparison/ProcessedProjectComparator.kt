@@ -19,6 +19,106 @@ object ProcessedProjectComparator {
 
     var TAINT_MATCH_THRESHOLD = 0.8
 
+    fun compareExecutionGraphs(lhs: ProjectModel, rhs: ProjectModel): Result {
+        // Nothing to compare
+        if (lhs.totalTraceCount == 0 || rhs.totalTraceCount == 0)
+            return Result(lhs, rhs, 0.0, 0.0)
+
+        // Array of mapping costs (inverse similarities)
+        val ecosts = Array(lhs.totalTraceCount) { DoubleArray(rhs.totalTraceCount) { 1.0 } }
+
+        // Number of comparisons - semaphore to wait for comparisons to finish
+        val permits = 8// lhs.totalTraceCount * rhs.totalTraceCount
+        val sem = Semaphore(permits)
+
+        // Flatten all traces
+        val ltraces = lhs.entryPointTraces.flatMap { it.value }
+        val rtraces = rhs.entryPointTraces.flatMap { it.value }
+
+        // Load the manifests
+        val lmanifests = lhs.manifests
+            .map { it.key to DocumentUtils.readObject(it.value, GraphManifest::class) }
+            .toMap()
+
+        val rmanifests = rhs.manifests
+            .map { it.key to DocumentUtils.readObject(it.value, GraphManifest::class) }
+            .toMap()
+
+        // Do the comparisons
+        for (l in 0 until ltraces.size) {
+            val ltrace = ltraces[l]
+
+            // Load the left graph
+            val lexecgraph = DocumentUtils.readObject(ltrace.executionGraphPath, GraphSerializationAdapter::class).toGraph()
+
+            for (r in 0 until rtraces.size) {
+                val rtrace = rtraces[r]
+
+                // Load the right graph
+                val rexecgraph = DocumentUtils.readObject(rtrace.executionGraphPath, GraphSerializationAdapter::class).toGraph()
+
+                // Acquire permit
+                sem.acquire()
+
+                // Spin off compare jobs
+                val execsimf = IterativeGraphComparator.compareAsync(lexecgraph, rexecgraph)
+
+                // Future to join the tasks + handle score aggregation
+                execsimf.thenRun {
+                    val execsim = execsimf.get()
+                    ecosts[l][r] = 1.0 - execsim.unionSim
+                }.whenComplete { void, throwable ->
+                    throwable?.printStackTrace()
+                    sem.release()
+                }
+            }
+        }
+
+        // Wait for all the permits to be returned
+        do {
+        } while (!sem.tryAcquire(permits, 1, TimeUnit.SECONDS))
+
+        // Find best matches
+        val lBestMatches = ltraces.mapIndexed { index, trace ->
+            var bestSim = 0.0
+            var bestIndex = 0
+
+            for (r in 0 until rtraces.size) {
+                val sim = 1.0 - ecosts[index][r]
+
+                if (sim > bestSim) {
+                    bestSim = sim
+                    bestIndex = r
+                }
+            }
+
+            return@mapIndexed Triple(trace, rtraces[bestIndex], bestSim)
+        }
+
+        val rBestMatches = rtraces.mapIndexed { index, trace ->
+            var bestSim = 0.0
+            var bestIndex = 0
+
+            for (l in 0 until ltraces.size) {
+                val sim = 1.0 - ecosts[l][index]
+
+                if (sim > bestSim) {
+                    bestSim = sim
+                    bestIndex = l
+                }
+            }
+
+            return@mapIndexed Triple(ltraces[bestIndex], trace, bestSim)
+        }
+
+        // Calculate similarity
+        val lsim = aggregateScores(arrayOf(lBestMatches), lmanifests, rmanifests, true)
+        val rsim = aggregateScores(arrayOf(rBestMatches), lmanifests, rmanifests, false)
+
+        // Return result
+        return Result(lhs, rhs, lsim, rsim)
+    }
+
     fun compare(lhs: ProjectModel, rhs: ProjectModel): Result {
         // Nothing to compare
         if (lhs.totalTraceCount == 0 || rhs.totalTraceCount == 0)
@@ -87,7 +187,7 @@ object ProcessedProjectComparator {
                         sem.release()
                     }
                     .exceptionally {
-                        println(it.localizedMessage)
+                        it.printStackTrace(System.err)
                         sem.release()
                         return@exceptionally null
                     }

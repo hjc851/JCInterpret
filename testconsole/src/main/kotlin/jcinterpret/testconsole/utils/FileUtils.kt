@@ -1,10 +1,7 @@
 package jcinterpret.testconsole.utils
 
 import java.io.IOException
-import java.nio.file.FileVisitResult
-import java.nio.file.FileVisitor
-import java.nio.file.Files
-import java.nio.file.Path
+import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 
 object FileUtils {
@@ -48,5 +45,20 @@ object FileUtils {
             directories.add(dir)
             return FileVisitResult.CONTINUE
         }
+    }
+
+    fun copyDir(from: Path, to: Path) {
+        if (!Files.isDirectory(from)) throw IllegalArgumentException("File $from does not exist")
+
+        Files.walk(from)
+            .forEachOrdered { file ->
+                Files.copy(file, to.resolve(from.relativize(file)), StandardCopyOption.REPLACE_EXISTING)
+            }
+    }
+
+    fun deleteDirectory(dir: Path) {
+        Files.walk(dir)
+            .sorted(Comparator.reverseOrder())
+            .forEach(Files::delete)
     }
 }

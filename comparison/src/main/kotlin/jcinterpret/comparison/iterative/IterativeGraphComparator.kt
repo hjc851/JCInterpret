@@ -47,9 +47,14 @@ object IterativeGraphComparator {
             for ((node, candidates) in makeInitialCandidates(lhs, rhs)) {
                 val nodeEdges = node.getEdgeSet<Edge>().toList()
 
-                for (candidate in candidates) {
+                cand@for (candidate in candidates) {
                     val candidateEdges = candidate.getEdgeSet<Edge>().toList()
                     val sims = Array(nodeEdges.count()) { DoubleArray(candidateEdges.count()) }
+
+                    if (nodeEdges.isEmpty() || candidateEdges.isEmpty()) {
+                        simMap[node]!![candidate] = 1.0
+                        continue@cand
+                    }
 
                     nodeEdges.forEachIndexed { lindex, nedge ->
                         val nopposite = nedge.getOpposite<Node>(node)
@@ -69,7 +74,11 @@ object IterativeGraphComparator {
                         }
                     }
 
-                    val matches = OptimalAssignmentAlgorithmFactory.execute(sims)
+                    val matches = try {
+                        OptimalAssignmentAlgorithmFactory.execute(sims)
+                    } catch (e: ArrayIndexOutOfBoundsException) {
+                        throw e
+                    }
                     val matchedNodes = mutableListOf<Triple<Node, Node, Double>>()
                     matches.forEachIndexed { lIndex, rIndex ->
                         if (rIndex != -1) {

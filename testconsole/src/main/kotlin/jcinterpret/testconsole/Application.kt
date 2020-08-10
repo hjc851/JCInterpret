@@ -15,6 +15,7 @@ import jcinterpret.testconsole.utils.FileUtils
 import jcinterpret.testconsole.utils.Project
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.util.stream.IntStream
 import kotlin.streams.toList
 
 fun main(args: Array<String>) {
@@ -92,31 +93,63 @@ fun main(args: Array<String>) {
     println()
 
     println("Generating Execution Traces")
-    val executionTraces = projects.mapIndexedNotNull { index, project ->
-        try {
-            println("Executing $index ${project.id}")
-            val result = project to project.entries.map { entry ->
-                val sig = entry.binding.qualifiedSignature()
-                println("\tInvoking $sig")
-                val interpreter = JavaConcolicInterpreterFactory.build(sig, project.descriptorLibrary, project.sourceLibrary)
-                val traces = interpreter.execute()
-                return@map entry to traces
-            }.toList().toMap()
-            return@mapIndexedNotNull result
-        }
-        catch (e: UnsupportedLanguageFeature) {
-            println("Removing ${project.id} due to: ${e.msg}")
-            return@mapIndexedNotNull null
-        }
-        catch (e: TooManyContextsException) {
-            System.err.println("Too many contexts in ${project.id}")
-            return@mapIndexedNotNull null
-        }
-        catch (e: Exception) {
-            System.err.println("Unknown error in ${project.id}")
-            return@mapIndexedNotNull null
-        }
-    }.toList().toMap()
+    val et = IntStream.rangeClosed(0, projects.size)
+        .parallel()
+        .mapToObj { i ->
+            val project = projects[i]
+
+            try {
+                val traces = project.entries.map { entry ->
+                    val sig = entry.binding.qualifiedSignature()
+                    val interpreter = JavaConcolicInterpreterFactory.build(sig, project.descriptorLibrary, project.sourceLibrary)
+                    val traces = interpreter.execute()
+                    return@map entry to traces
+                }
+
+                println("Executed $i ${project.id}")
+
+                return@mapToObj project to traces
+            } catch (e: UnsupportedLanguageFeature) {
+                println("Removing ${project.id} due to: ${e.msg}")
+                return@mapToObj null
+            }
+            catch (e: TooManyContextsException) {
+                System.err.println("Too many contexts in ${project.id}")
+                return@mapToObj null
+            }
+            catch (e: Exception) {
+                System.err.println("Unknown error in ${project.id}")
+                return@mapToObj null
+            }
+        }.toList()
+        .filterNotNull()
+        .toMap()
+
+//    val executionTraces = projects.mapIndexedNotNull { index, project ->
+//        try {
+//            println("Executing $index ${project.id}")
+//            val result = project to project.entries.map { entry ->
+//                val sig = entry.binding.qualifiedSignature()
+//                println("\tInvoking $sig")
+//                val interpreter = JavaConcolicInterpreterFactory.build(sig, project.descriptorLibrary, project.sourceLibrary)
+//                val traces = interpreter.execute()
+//                return@map entry to traces
+//            }.toList().toMap()
+//            return@mapIndexedNotNull result
+//        }
+//        catch (e: UnsupportedLanguageFeature) {
+//            println("Removing ${project.id} due to: ${e.msg}")
+//            return@mapIndexedNotNull null
+//        }
+//        catch (e: TooManyContextsException) {
+//            System.err.println("Too many contexts in ${project.id}")
+//            return@mapIndexedNotNull null
+//        }
+//        catch (e: Exception) {
+//            System.err.println("Unknown error in ${project.id}")
+//            return@mapIndexedNotNull null
+//        }
+//    }.toList().toMap()
 
 
 //    println("Writing results")

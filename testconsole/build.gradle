@@ -35,6 +35,9 @@ dependencies {
     implementation project(':graph-serialization')
     implementation project(':comparison')
 
+    // https://mvnrepository.com/artifact/commons-io/commons-io
+    implementation group: 'commons-io', name: 'commons-io', version: '2.7'
+
     implementation group: 'org.eclipse.jdt', name: 'org.eclipse.jdt.core', version: '3.15.+'
 
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.9.6'
@@ -47,6 +50,7 @@ dependencies {
     compile group: 'nz.ac.waikato.cms.weka', name: 'weka-stable', version: '3.8.0'
 
     runtime files('src/main/resources')
+    implementation files('../lib/tools.jar')
 
     testImplementation group: 'junit', name: 'junit', version: '4.12'
 }

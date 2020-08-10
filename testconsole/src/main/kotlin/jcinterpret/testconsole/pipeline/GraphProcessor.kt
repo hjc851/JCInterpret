@@ -9,7 +9,10 @@ import jcinterpret.testconsole.utils.TraceModelBuilder
 import java.io.Serializable
 import java.nio.file.FileSystem
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.Duration
+import java.time.Instant
 import kotlin.streams.toList
 
 val condenser = ExecutionGraphCondenser(0.9)
@@ -20,25 +23,44 @@ data class GraphManifest (
     val graphWeights: Map<String, Int>
 ): Serializable
 
-fun main(args: Array<String>) {
-    //  Get the args
-    //  root: The root of the produced execution traces
-    //  out: the path to store the decomposed graphs in
-    val root = Paths.get(args[0])
-    val out = Paths.get(args[1])
+object GraphProcessor {
+    fun main(args: Array<String>) {
+        //  Get the args
+        //  root: The root of the produced execution traces
+        //  out: the path to store the decomposed graphs in
+        val root = Paths.get(args[0])
+        val out = Paths.get(args[1])
 
-    //  List all the projects in the root directory
-    val projects = Files.list(root)
-        .filter { Files.isDirectory(it) && !Files.isHidden(it) }
-        .use { it.toList() }
-        .sortedBy { it.fileName.toString() }
+        val start = Instant.now()
 
-    //  Iterate through the projects and process one by one (parallel uses too much memory)
-    for (project in projects) {
+        //  List all the projects in the root directory
+        val projects = Files.list(root)
+            .filter { Files.isDirectory(it) && !Files.isHidden(it) }
+            .use { it.toList() }
+            .sortedBy { it.fileName.toString() }
+
+        //  Iterate through the projects and process one by one (parallel uses too much memory)
+        for (project in projects) {
+            processProject(project, out.resolve(project.fileName.toString()))
+
+            // Force clear the models from the heap
+            System.gc()
+        }
+
+        val finish = Instant.now()
+        val elapsed = Duration.between(start, finish)
+
+        println("Elapsed: ${elapsed.seconds}s")
+
+        println("Finished")
+        System.exit(0)
+    }
+
+    fun processProject(project: Path, out: Path) {
         val id = project.fileName.toString()
 
         //  The output directory will be ${root}/${id}
-        val pout = out.resolve(id)
+        val pout = out
         if (Files.notExists(pout)) Files.createDirectories(pout)
 
         //  List all of the execution traces for the project
@@ -47,7 +69,7 @@ fun main(args: Array<String>) {
             .filter { !Files.isDirectory(it) && !Files.isHidden(it) && it.fileName.toString().endsWith(".ser")}
             .use { it.toList() }
 
-        if (entryPointTraceFiles.isEmpty()) continue
+        if (entryPointTraceFiles.isEmpty()) return
 
         for (entryPointFile in entryPointTraceFiles) {
             //  Load the trace
@@ -119,11 +141,15 @@ fun main(args: Array<String>) {
 
             println("\t\tFinished writing data")
         }
-
-        // Force clear the models from the heap
-        System.gc()
     }
+}
 
-    println("Finished")
-    System.exit(0)
+object SingleGraphProcessor {
+    @JvmStatic
+    fun main(args: Array<String>) {
+        val proj = Paths.get(args[0])
+        val out = Paths.get(args[1])
+        GraphProcessor.processProject(proj, out)
+        System.exit(0)
+    }
 }

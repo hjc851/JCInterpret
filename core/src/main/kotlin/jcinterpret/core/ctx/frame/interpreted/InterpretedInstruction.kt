@@ -1015,7 +1015,7 @@ class foreach_loop(val variable: String, val type: TypeSignature, val body: Stat
     private fun setup(ctx: ExecutionContext, frame: InterpretedExecutionFrame) {
         initialised = true
 
-        val ref = frame.pop() as StackReference
+        val ref = frame.pop() as ReferenceValue
         val collection = ctx.heapArea.dereference(ref)
 
         if (collection is SymbolicArray) {

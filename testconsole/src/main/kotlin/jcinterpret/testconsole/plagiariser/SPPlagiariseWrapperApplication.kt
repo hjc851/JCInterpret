@@ -44,7 +44,8 @@ object SPPlagiariseWrapperApplication {
                     i >= 2,
                     i >= 3,
                     i >= 4,
-                    i >= 5
+                    i >= 5,
+                    50
                 )
 
                 val tmp = Files.createTempDirectory("_sp")
@@ -111,19 +112,6 @@ object SPPlagiariseWrapperApplication {
                     .forEach(Files::delete)
             }
         }
-
-//        val proc = ProcessBuilder().command(
-//            listOf(
-//                "/bin/sh",
-//                exec
-//            )
-//        ).start()
-//
-//        val exitCode = proc.waitFor()
-//
-//
-
-        Unit
     }
 }
 
@@ -140,5 +128,6 @@ class ConfigDocument (
     val l2: Boolean,
     val l3: Boolean,
     val l4: Boolean,
-    val l5: Boolean
+    val l5: Boolean,
+    val randomWeight: Int
 )

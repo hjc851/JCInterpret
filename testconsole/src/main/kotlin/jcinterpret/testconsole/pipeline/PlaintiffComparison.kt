@@ -4,10 +4,14 @@ import jcinterpret.testconsole.pipeline.comparison.NoSecondaryConcernsException
 import jcinterpret.testconsole.pipeline.comparison.ProcessedProjectComparator
 import jcinterpret.testconsole.utils.ProjectModelBuilder
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Duration
 import java.time.Instant
+import kotlin.math.max
 import kotlin.streams.toList
+
+
 
 fun main(args: Array<String>) {
     val start = Instant.now()
@@ -48,7 +52,7 @@ fun main(args: Array<String>) {
             lsim, rsim
         ) = result
 
-        sims[rid] = (lsim + rsim) / 2.0
+        sims[rid] = max(lsim, rsim) // (lsim + rsim) / 2.0
 
         println("LSIM: $lsim")
         println("RSIM: $rsim")
@@ -69,6 +73,8 @@ fun main(args: Array<String>) {
 
     println()
     println("Elapsed time ${elapsed.seconds} (s)")
+    println("Finished")
+    System.exit(0)
 }
 
 
