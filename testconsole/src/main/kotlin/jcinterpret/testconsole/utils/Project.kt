@@ -1,5 +1,6 @@
 package jcinterpret.testconsole.utils
 
+import jcinterpret.core.bytecode.BytecodeLibrary
 import jcinterpret.core.descriptors.DescriptorLibrary
 import jcinterpret.core.source.SourceLibrary
 import jcinterpret.entry.EntryPoint
@@ -12,5 +13,6 @@ data class Project (
     val compilationUnits: List<CompilationUnit>,
     val descriptorLibrary: DescriptorLibrary,
     val sourceLibrary: SourceLibrary,
+    val bytecodeLibrary: BytecodeLibrary,
     val entries: List<EntryPoint>
 )

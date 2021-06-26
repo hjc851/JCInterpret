@@ -3,9 +3,9 @@ package jcinterpret.testconsole
 import jcinterpret.core.ExecutionConfig
 import jcinterpret.core.JavaConcolicInterpreterFactory
 import jcinterpret.core.TooManyContextsException
+import jcinterpret.core.bytecode.BytecodeLibraryFactory
 import jcinterpret.core.control.UnsupportedLanguageFeature
-import jcinterpret.core.descriptors.DescriptorLibraryFactory
-import jcinterpret.core.descriptors.qualifiedSignature
+import jcinterpret.core.descriptors.*
 import jcinterpret.core.source.SourceLibraryFactory
 import jcinterpret.document.ConfigDocument
 import jcinterpret.document.DocumentUtils
@@ -70,12 +70,18 @@ fun main(args: Array<String>) {
 
         if (msg.isNotEmpty()) {
             println("Ignoring $id")
-//            msg.forEach { println("\t${it.message}") }
             return@mapNotNull null
         }
 
-        val descriptorLibrary = DescriptorLibraryFactory.build(compilationUnits, libraries)
+        val bytecodeLibrary = BytecodeLibraryFactory.build(path)
         val sourceLibrary = SourceLibraryFactory.build(compilationUnits)
+        val descriptorLibrary = DescriptorLibrary(
+            listOf(
+                BytecodeLibraryDescriptorResolver(bytecodeLibrary),
+                BindingDescriptorResolver(compilationUnits),
+                ClassFileDescriptorResolver(libraries)
+            )
+        )
 
         val entries = EntryPointFinder.find(compilationUnits, eps)
 
@@ -85,6 +91,7 @@ fun main(args: Array<String>) {
             compilationUnits,
             descriptorLibrary,
             sourceLibrary,
+            bytecodeLibrary,
             entries
         )
     }.toList()
@@ -93,37 +100,58 @@ fun main(args: Array<String>) {
     println()
 
     println("Generating Execution Traces")
-    val et = IntStream.rangeClosed(0, projects.size)
-        .parallel()
-        .mapToObj { i ->
-            val project = projects[i]
+    val et = projects.map { project ->
+        val traces = project.entries.map { entry ->
+            val sig = entry.binding.qualifiedSignature()
+            val interpreter = JavaConcolicInterpreterFactory.build(
+                JavaConcolicInterpreterFactory.ExecutionMode.PROJECT_BYTECODE,
+                sig,
+                project.descriptorLibrary,
+                project.sourceLibrary,
+                project.bytecodeLibrary
+            )
+            val traces = interpreter.execute()
+            return@map entry to traces
+        }
 
-            try {
-                val traces = project.entries.map { entry ->
-                    val sig = entry.binding.qualifiedSignature()
-                    val interpreter = JavaConcolicInterpreterFactory.build(sig, project.descriptorLibrary, project.sourceLibrary)
-                    val traces = interpreter.execute()
-                    return@map entry to traces
-                }
+        return@map project to traces
+    }.toMap()
 
-                println("Executed $i ${project.id}")
+    val count = et.values.sumBy { it.size }
 
-                return@mapToObj project to traces
-            } catch (e: UnsupportedLanguageFeature) {
-                println("Removing ${project.id} due to: ${e.msg}")
-                return@mapToObj null
-            }
-            catch (e: TooManyContextsException) {
-                System.err.println("Too many contexts in ${project.id}")
-                return@mapToObj null
-            }
-            catch (e: Exception) {
-                System.err.println("Unknown error in ${project.id}")
-                return@mapToObj null
-            }
-        }.toList()
-        .filterNotNull()
-        .toMap()
+    println("Generated ${count} execution trace(s)")
+
+//    val et = IntStream.rangeClosed(0, projects.size)
+//        .parallel()
+//        .mapToObj { i ->
+//            val project = projects[i]
+//
+//            try {
+//                val traces = project.entries.map { entry ->
+//                    val sig = entry.binding.qualifiedSignature()
+//                    val interpreter = JavaConcolicInterpreterFactory.build(sig, project.descriptorLibrary, project.sourceLibrary)
+//                    val traces = interpreter.execute()
+//                    return@map entry to traces
+//                }
+//
+//                println("Executed $i ${project.id}")
+//
+//                return@mapToObj project to traces
+//            } catch (e: UnsupportedLanguageFeature) {
+//                println("Removing ${project.id} due to: ${e.msg}")
+//                return@mapToObj null
+//            }
+//            catch (e: TooManyContextsException) {
+//                System.err.println("Too many contexts in ${project.id}")
+//                return@mapToObj null
+//            }
+//            catch (e: Exception) {
+//                System.err.println("Unknown error in ${project.id}")
+//                return@mapToObj null
+//            }
+//        }.toList()
+//        .filterNotNull()
+//        .toMap()
 
 //    val executionTraces = projects.mapIndexedNotNull { index, project ->
 //        try {
