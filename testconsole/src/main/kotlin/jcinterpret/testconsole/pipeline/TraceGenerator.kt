@@ -3,6 +3,7 @@ package jcinterpret.testconsole.pipeline
 import jcinterpret.core.ExecutionConfig
 import jcinterpret.core.JavaConcolicInterpreterFactory
 import jcinterpret.core.TooManyContextsException
+import jcinterpret.core.bytecode.BytecodeLibraryFactory
 import jcinterpret.core.control.UnsupportedLanguageFeature
 import jcinterpret.core.descriptors.DescriptorLibraryFactory
 import jcinterpret.core.descriptors.UnresolvableDescriptorException
@@ -114,8 +115,9 @@ object TraceGenerator {
                     return@map null
                 }
 
-                val descriptorLibrary = DescriptorLibraryFactory.build(compilationUnits, libraries)
+                val bytecodeLibrary = BytecodeLibraryFactory.build(path)
                 val sourceLibrary = SourceLibraryFactory.build(compilationUnits)
+                val descriptorLibrary = DescriptorLibraryFactory.build(compilationUnits, libraries)
                 val entries = EntryPointFinder.find(compilationUnits, eps)
 
                 if (entries.isEmpty()) {
@@ -129,6 +131,7 @@ object TraceGenerator {
                     compilationUnits,
                     descriptorLibrary,
                     sourceLibrary,
+                    bytecodeLibrary,
                     entries
                 )
             }.toList()
@@ -153,7 +156,13 @@ object TraceGenerator {
                     val result = project.entries.parallelStream()
                         .map { entry ->
                             val sig = entry.binding.qualifiedSignature()
-                            val interpreter = JavaConcolicInterpreterFactory.build(sig, project.descriptorLibrary, project.sourceLibrary)
+                            val interpreter = JavaConcolicInterpreterFactory.build(
+                                JavaConcolicInterpreterFactory.ExecutionMode.PROJECT_BYTECODE,
+                                sig,
+                                project.descriptorLibrary,
+                                project.sourceLibrary,
+                                project.bytecodeLibrary
+                            )
                             val traces = interpreter.execute()
                             return@map entry to traces
                         }.toList()

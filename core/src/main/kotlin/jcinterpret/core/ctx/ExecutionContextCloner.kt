@@ -24,10 +24,12 @@ object ExecutionContextCloner {
         val frames = clone(oldCtx.frames)
 
         return ExecutionContext (
+            oldCtx.executionMode,
             oldCtx.interpreter,
             records,
             descriptorLibrary,
             sourceList,
+            oldCtx.bytecodeLibrary,
             heapArea,
             classArea,
             nativeArea,
@@ -113,7 +115,7 @@ object ExecutionContextCloner {
 
     fun clone(oldClassArea: ClassArea): ClassArea {
         val classes = mutableMapOf<String, ClassType>()
-        val ca = ClassArea(classes)
+        val ca = ClassArea(oldClassArea.mode, classes)
         oldClassArea.classes.map { it.key to clone(it.value, ca) }.toMap(classes)
 
         return ca

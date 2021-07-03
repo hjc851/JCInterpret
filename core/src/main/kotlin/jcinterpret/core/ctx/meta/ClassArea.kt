@@ -1,5 +1,6 @@
 package jcinterpret.core.ctx.meta
 
+import jcinterpret.core.JavaConcolicInterpreterFactory
 import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.ctx.frame.interpreted.*
 import jcinterpret.core.ctx.frame.synthetic.AllocateClassType
@@ -16,6 +17,7 @@ import java.lang.reflect.Modifier
 import java.util.*
 
 class ClassArea (
+    val mode: JavaConcolicInterpreterFactory.ExecutionMode,
     val classes: MutableMap<String, ClassType>
 ) {
     fun isClassLoaded(sig: ClassTypeSignature): Boolean = isClassLoaded(sig.toString())

@@ -2,6 +2,8 @@ package jcinterpret.core.ctx
 
 import jcinterpret.core.ExecutionConfig
 import jcinterpret.core.JavaConcolicInterpreter
+import jcinterpret.core.JavaConcolicInterpreterFactory
+import jcinterpret.core.bytecode.BytecodeLibrary
 import jcinterpret.core.control.ClassAreaFault
 import jcinterpret.core.control.HaltException
 import jcinterpret.core.control.ReturnException
@@ -21,10 +23,12 @@ import jcinterpret.signature.QualifiedMethodSignature
 import java.util.*
 
 class ExecutionContext (
+    val executionMode: JavaConcolicInterpreterFactory.ExecutionMode,
     val interpreter: JavaConcolicInterpreter,
     val records: MutableList<TraceRecord>,
     val descriptorLibrary: DescriptorLibrary,
     val sourceLibrary: SourceLibrary,
+    val bytecodeLibrary: BytecodeLibrary,
     val heapArea: HeapArea,
     val classArea: ClassArea,
     val nativeArea: NativeArea,

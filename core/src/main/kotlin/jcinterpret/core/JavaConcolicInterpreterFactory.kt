@@ -1,5 +1,6 @@
 package jcinterpret.core
 
+import jcinterpret.core.bytecode.BytecodeLibrary
 import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.ctx.frame.ExecutionFrame
 import jcinterpret.core.ctx.frame.synthetic.*
@@ -15,28 +16,36 @@ import jcinterpret.signature.QualifiedMethodSignature
 import java.util.*
 
 object JavaConcolicInterpreterFactory {
+
+    enum class ExecutionMode {
+        SOURCECODE, PROJECT_BYTECODE
+    }
+
     fun build (
+        mode: ExecutionMode,
         entryPoint: QualifiedMethodSignature,
         descLibrary: DescriptorLibrary,
-        srcLibrary: SourceLibrary
+        srcLibrary: SourceLibrary,
+        bcLibrary: BytecodeLibrary
     ): JavaConcolicInterpreter {
 
         val contexts = mutableListOf<ExecutionContext>()
         val interpreter = JavaConcolicInterpreter(contexts)
 
-        val ctx: ExecutionContext = buildExecutionContext(entryPoint, descLibrary, srcLibrary, interpreter)
+        val ctx = buildSourceCodeExecutionContext(mode, entryPoint, descLibrary, srcLibrary, bcLibrary, interpreter)
         contexts.add(ctx)
 
         return interpreter
     }
 
-    private fun buildExecutionContext (
+    private fun buildSourceCodeExecutionContext (
+        mode: ExecutionMode,
         entryPoint: QualifiedMethodSignature,
         descLibrary: DescriptorLibrary,
         srcLibrary: SourceLibrary,
+        bcLibrary: BytecodeLibrary,
         interpreter: JavaConcolicInterpreter
     ): ExecutionContext {
-
         val methodDescriptor = descLibrary.getDescriptor(entryPoint)
 
         val instructions = Stack<SyntheticInstruction>()
@@ -69,12 +78,14 @@ object JavaConcolicInterpreterFactory {
         frames.push(frame)
 
         return ExecutionContext (
+            mode,
             interpreter,
             mutableListOf(),
             descLibrary,
             srcLibrary,
+            bcLibrary,
             HeapArea((1), mutableMapOf(), mutableMapOf()),
-            ClassArea(mutableMapOf()),
+            ClassArea(mode, mutableMapOf()),
             NativeArea(),
             frames
         )
