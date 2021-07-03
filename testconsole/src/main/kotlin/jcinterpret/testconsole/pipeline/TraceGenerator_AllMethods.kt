@@ -3,10 +3,9 @@ package jcinterpret.testconsole.pipeline
 import jcinterpret.core.ExecutionConfig
 import jcinterpret.core.JavaConcolicInterpreterFactory
 import jcinterpret.core.TooManyContextsException
+import jcinterpret.core.bytecode.BytecodeLibraryFactory
 import jcinterpret.core.control.UnsupportedLanguageFeature
-import jcinterpret.core.descriptors.DescriptorLibraryFactory
-import jcinterpret.core.descriptors.UnresolvableDescriptorException
-import jcinterpret.core.descriptors.qualifiedSignature
+import jcinterpret.core.descriptors.*
 import jcinterpret.core.source.SourceLibraryFactory
 import jcinterpret.core.trace.EntryPointExecutionTraces
 import jcinterpret.document.ConfigDocument
@@ -115,8 +114,16 @@ object TraceGenerator_AllMethods {
                     return@map null
                 }
 
-                val descriptorLibrary = DescriptorLibraryFactory.build(compilationUnits, libraries)
+                val bytecodeLibrary = BytecodeLibraryFactory.build(path)
                 val sourceLibrary = SourceLibraryFactory.build(compilationUnits)
+                val descriptorLibrary = DescriptorLibrary(
+                    listOf(
+                        BytecodeLibraryDescriptorResolver(bytecodeLibrary),
+                        BindingDescriptorResolver(compilationUnits),
+                        ClassFileDescriptorResolver(libraries)
+                    )
+                )
+
                 val entries = EntryPointFinder.findAllMethods(compilationUnits)
 
                 if (entries.isEmpty()) {
@@ -130,6 +137,7 @@ object TraceGenerator_AllMethods {
                     compilationUnits,
                     descriptorLibrary,
                     sourceLibrary,
+                    bytecodeLibrary,
                     entries
                 )
             }.toList()
@@ -154,7 +162,13 @@ object TraceGenerator_AllMethods {
                     val result = project.entries.parallelStream()
                         .map { entry ->
                             val sig = entry.binding.qualifiedSignature()
-                            val interpreter = JavaConcolicInterpreterFactory.build(sig, project.descriptorLibrary, project.sourceLibrary)
+                            val interpreter = JavaConcolicInterpreterFactory.build(
+                                JavaConcolicInterpreterFactory.ExecutionMode.SOURCECODE,
+                                sig,
+                                project.descriptorLibrary,
+                                project.sourceLibrary,
+                                project.bytecodeLibrary
+                            )
                             val traces = interpreter.execute()
                             return@map entry to traces
                         }.toList()

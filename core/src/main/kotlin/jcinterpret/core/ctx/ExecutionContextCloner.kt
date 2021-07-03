@@ -170,7 +170,8 @@ object ExecutionContextCloner {
                     oldFrame.cp,
                     oldFrame.code.clone(),
                     oldFrame.sc,
-                    oldFrame.pc
+                    oldFrame.pc,
+                    oldFrame.loopCounter.toMap().toMutableMap()
                 )
             }
 

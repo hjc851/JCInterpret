@@ -102,7 +102,7 @@ fun main(args: Array<String>) {
     println("Generating Execution Traces")
     val et = projects.map { project ->
         val traces = project.entries.map { entry ->
-            val sig = entry.binding.qualifiedSignature()
+            val sig = BindingUtils.qualifiedSignature(entry.binding)
             val interpreter = JavaConcolicInterpreterFactory.build(
                 JavaConcolicInterpreterFactory.ExecutionMode.PROJECT_BYTECODE,
                 sig,
@@ -120,107 +120,6 @@ fun main(args: Array<String>) {
     val count = et.values.sumBy { it.size }
 
     println("Generated ${count} execution trace(s)")
-
-//    val et = IntStream.rangeClosed(0, projects.size)
-//        .parallel()
-//        .mapToObj { i ->
-//            val project = projects[i]
-//
-//            try {
-//                val traces = project.entries.map { entry ->
-//                    val sig = entry.binding.qualifiedSignature()
-//                    val interpreter = JavaConcolicInterpreterFactory.build(sig, project.descriptorLibrary, project.sourceLibrary)
-//                    val traces = interpreter.execute()
-//                    return@map entry to traces
-//                }
-//
-//                println("Executed $i ${project.id}")
-//
-//                return@mapToObj project to traces
-//            } catch (e: UnsupportedLanguageFeature) {
-//                println("Removing ${project.id} due to: ${e.msg}")
-//                return@mapToObj null
-//            }
-//            catch (e: TooManyContextsException) {
-//                System.err.println("Too many contexts in ${project.id}")
-//                return@mapToObj null
-//            }
-//            catch (e: Exception) {
-//                System.err.println("Unknown error in ${project.id}")
-//                return@mapToObj null
-//            }
-//        }.toList()
-//        .filterNotNull()
-//        .toMap()
-
-//    val executionTraces = projects.mapIndexedNotNull { index, project ->
-//        try {
-//            println("Executing $index ${project.id}")
-//            val result = project to project.entries.map { entry ->
-//                val sig = entry.binding.qualifiedSignature()
-//                println("\tInvoking $sig")
-//                val interpreter = JavaConcolicInterpreterFactory.build(sig, project.descriptorLibrary, project.sourceLibrary)
-//                val traces = interpreter.execute()
-//                return@map entry to traces
-//            }.toList().toMap()
-//            return@mapIndexedNotNull result
-//        }
-//        catch (e: UnsupportedLanguageFeature) {
-//            println("Removing ${project.id} due to: ${e.msg}")
-//            return@mapIndexedNotNull null
-//        }
-//        catch (e: TooManyContextsException) {
-//            System.err.println("Too many contexts in ${project.id}")
-//            return@mapIndexedNotNull null
-//        }
-//        catch (e: Exception) {
-//            System.err.println("Unknown error in ${project.id}")
-//            return@mapIndexedNotNull null
-//        }
-//    }.toList().toMap()
-
-
-//    println("Writing results")
-//    val dir = output.resolve(Instant.now().toString())
-//    Files.createDirectory(dir)
-//
-//    for ((project, entryTraces) in executionTraces) {
-//        val projDir = dir.resolve(project.id)
-//        Files.createDirectory(projDir)
-//
-//        for ((entry, traces) in entryTraces) {
-//            val msig = entry.binding.qualifiedSignature()
-//            val fout = projDir.resolve(msig.toString())
-//
-//            val document = EntryPointExecutionTraces (
-//                msig,
-//                traces.toTypedArray()
-//            )
-//
-//            DocumentUtils.writeObject(fout, document)
-//        }
-//    }
-
-//    println("Displaying graphs")
-//    for ((project, entryTraces) in executionTraces) {
-//        for ((entry, traces) in entryTraces) {
-//            traces.forEachIndexed { index, trace ->
-//                val egraph = ExecutionGraphBuilder.build("${project.id} ${entry.binding.qualifiedSignature()} #$index", trace)
-//                val prunegraph = LiteralChainGraphPruner.prune(egraph.graph)
-//
-//                egraph.graph.display().apply {
-//                    this.closeFramePolicy = Viewer.CloseFramePolicy.CLOSE_VIEWER
-//                }
-//
-//                prunegraph.display().apply {
-//                    this.closeFramePolicy = Viewer.CloseFramePolicy.CLOSE_VIEWER
-//                }
-//
-//                print("Press any key to continue -> ")
-//                readLine()
-//            }
-//        }
-//    }
 
     println("Finished")
 }

@@ -1,6 +1,7 @@
 package jcinterpret.core.ctx.frame.bytecode
 
 import com.sun.tools.classfile.ConstantPool
+import jcinterpret.core.control.ReturnException
 import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.memory.heap.SymbolicArray
 import jcinterpret.core.memory.stack.*
@@ -218,6 +219,7 @@ object BytecodeExecutor {
         val instr = frame.nextByte()
         val hexinstr = "%02X".format(instr).toLowerCase()
         val handle = handles[hexinstr] ?: throw Exception("Unimplemented instruction hex ${hexinstr}")
+        println(handle)
         handle.invoke(ctx, frame)
     }
 
@@ -761,7 +763,8 @@ object BytecodeExecutor {
     // goes to another instruction at branchoffset (signed short constructed from unsigned bytes branchbyte1 << 8 | branchbyte2)
 // [no change]
     fun goto(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        val offset = frame.nextShort()
+        frame.branch(offset)
     }
 
     // goes to another instruction at branchoffset (signed int constructed from unsigned bytes branchbyte1 << 24 | branchbyte2 << 16 | branchbyte3 << 8 | branchbyte4)
@@ -837,7 +840,7 @@ object BytecodeExecutor {
     }
 
     // load the int value 0 onto the stack
-// → 0
+    // → 0
     fun iconst_0(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
         frame.push(StackInt(0))
     }
@@ -899,10 +902,17 @@ object BytecodeExecutor {
     // if value1 is greater than or equal to value2, branch to instruction at branchoffset (signed short constructed from unsigned bytes branchbyte1 << 8 | branchbyte2)
     // value1, value2 →
     fun if_icmpge(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
+        frame.markLoop()
+        val exceeded = frame.exceededLoopLimit()
+
         val v1 = frame.pop()
         val v2 = frame.pop()
-
         val offset = frame.nextShort()
+
+        if (exceeded) {
+            frame.branch(offset)
+            return
+        }
 
         if (v1 is ConcreteValue<*> && v2 is ConcreteValue<*>) {
             val truth = (v1 as StackInt).value >= (v2 as StackInt).value
@@ -1028,7 +1038,16 @@ object BytecodeExecutor {
     // increment local variable #index by signed byte const
     // [No change]
     fun iinc(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        val idx = frame.nextByte().toInt()
+
+        val value = frame.locals[idx]
+
+        if (value is ConcreteValue<*>) {
+            var incValue = (value as StackInt).value + 1
+            frame.locals[idx] = StackInt(incValue)
+        } else {
+            TODO("Not implemented")
+        }
     }
 
     // load an int value from a local variable #index
@@ -1529,21 +1548,22 @@ object BytecodeExecutor {
     }
 
     // perform no operation
-// [No change]
+    // [No change]
     fun nop(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+
     }
 
     // discard the top value on the stack
 // value →
     fun pop(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        frame.pop()
     }
 
     // discard the top two values on the stack (or one value, if it is a double or long)
 // {value2, value1} →
     fun pop2(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        frame.pop()
+        frame.pop()
     }
 
     // set field to value in an object objectref, where the field is identified by a field reference index in constant pool (indexbyte1 << 8 | indexbyte2)
@@ -1567,7 +1587,7 @@ object BytecodeExecutor {
     // return void from method
 // → [empty]
     fun `return`(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        throw ReturnException(null, frame.method)
     }
 
     // load short from array

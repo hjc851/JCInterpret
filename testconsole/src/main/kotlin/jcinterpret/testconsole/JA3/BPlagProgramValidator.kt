@@ -6,7 +6,6 @@ import jcinterpret.core.TooManyContextsException
 import jcinterpret.core.bytecode.BytecodeLibraryFactory
 import jcinterpret.core.control.UnsupportedLanguageFeature
 import jcinterpret.core.descriptors.DescriptorLibraryFactory
-import jcinterpret.core.descriptors.qualifiedSignature
 import jcinterpret.core.source.SourceLibraryFactory
 import jcinterpret.core.trace.EntryPointExecutionTraces
 import jcinterpret.document.ConfigDocument
@@ -23,6 +22,7 @@ import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import kotlin.streams.toList
+import jcinterpret.core.descriptors.qualifiedSignature
 
 object BPlagProgramValidator {
     @JvmStatic
@@ -164,19 +164,7 @@ object BPlagProgramValidator {
                     toDelete.add(project.path)
                 }
 
-//                catch (e: UnsupportedLanguageFeature) {
-//                    System.err.println("Removing ${project.id} due to: ${e.msg}")
-//                    toDelete.add(project.path)
-//                } catch (e: TooManyContextsException) {
-//                    System.err.println("Too many contexts in ${project.id}")
-//                    toDelete.add(project.path)
-//                } catch (e: UnresolvableDescriptorException) {
-//                    System.err.println("Cannot resolve descriptor for type ${e.sig}")
-//                    toDelete.add(project.path)
-//                } catch (e: TimeoutException) {
-//                    System.err.println("${project.id} timeout waiting for traces ...")
-//                    toDelete.add(project.path)
-//                }
+
             }
 
         println()

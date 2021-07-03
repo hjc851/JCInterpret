@@ -96,3 +96,9 @@ fun IMethodBinding.signature(): MethodSignature {
         MethodTypeSignature(params, retn)
     )
 }
+
+object BindingUtils {
+    fun qualifiedSignature(binding: IMethodBinding): QualifiedMethodSignature {
+        return binding.qualifiedSignature()
+    }
+}

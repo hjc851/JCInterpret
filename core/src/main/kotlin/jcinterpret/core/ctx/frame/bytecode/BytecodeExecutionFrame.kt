@@ -2,6 +2,7 @@ package jcinterpret.core.ctx.frame.bytecode
 
 import com.sun.tools.classfile.ClassFile
 import com.sun.tools.classfile.ConstantPool
+import jcinterpret.core.ExecutionConfig
 import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.ctx.frame.MethodBoundExecutionFrame
 import jcinterpret.core.memory.stack.StackValue
@@ -16,7 +17,8 @@ class BytecodeExecutionFrame(
     val cp: ConstantPool,
     val code: ByteArray,
     var sc: Int = 0,
-    var pc: Int = 0
+    var pc: Int = 0,
+    var loopCounter: MutableMap<Int, Int> = mutableMapOf()
 ): MethodBoundExecutionFrame() {
     override val isFinished: Boolean
         get() = pc >= code.size
@@ -35,6 +37,18 @@ class BytecodeExecutionFrame(
 
     override fun peek(): StackValue {
         return stack[sc-1]
+    }
+
+    //  //  //  //  //  //
+    //  Loop Prevention //
+    //  //  //  //  //  //
+
+    fun markLoop() {
+        loopCounter[this.pc-1] = loopCounter.getOrDefault(this.pc-1, 0) + 1
+    }
+
+    fun exceededLoopLimit(): Boolean {
+        return loopCounter.getValue(this.pc-1) >= ExecutionConfig.maxLoopExecutions
     }
 
     //  //  //  //
