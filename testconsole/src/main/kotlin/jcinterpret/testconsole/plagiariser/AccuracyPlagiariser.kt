@@ -14,22 +14,23 @@ object AccuracyPlagiariser {
     val variant_out = Paths.get("/media/haydencheers/Data/SymbExec/variant_src")
 
     val ds_names = listOf(
-        "COMP2230_A1_2018",
-        "COMP2240_A1_2018",
-        "COMP2240_A2_2018",
-        "COMP2240_A3_2018",
-        "SENG1110_A1_2017",
-        "SENG1110_A2_2017",
-        "SENG2050_A1_2017",
-        "SENG2050_A2_2017",
-        "SENG2050_A1_2018",
-        "SENG2050_A2_2018",
-        "SENG2050_A1_2019",
-        "SENG2050_A2_2019"
+        "algorithms"
+//        "COMP2230_A1_2018",
+//        "COMP2240_A1_2018",
+//        "COMP2240_A2_2018",
+//        "COMP2240_A3_2018",
+//        "SENG1110_A1_2017",
+//        "SENG1110_A2_2017",
+//        "SENG2050_A1_2017",
+//        "SENG2050_A2_2017",
+//        "SENG2050_A1_2018",
+//        "SENG2050_A2_2018",
+//        "SENG2050_A1_2019",
+//        "SENG2050_A2_2019"
     )
 
     val trns_levels = listOf(20, 40, 60, 80, 100)
-    val variant_count = 10
+    val variant_count = 1
 
     val global_libs = Files.list(Paths.get("/media/haydencheers/Data/SymbExec/lib"))
         .filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".jar") }
@@ -43,123 +44,126 @@ object AccuracyPlagiariser {
         ds_names
             .parallelStream()
             .forEach { ds ->
-            val ds_root = ds_src.resolve(ds)
-            val variant_root = variant_out.resolve(ds)
-            if (!Files.exists(variant_root)) Files.createDirectories(variant_root)
+                val ds_root = ds_src.resolve(ds)
+                val variant_root = variant_out.resolve(ds)
+                if (!Files.exists(variant_root)) Files.createDirectories(variant_root)
 
-            // Identify the existing variants
-            val existing_variants = Files.list(variant_root)
-                .filter { Files.isDirectory(it) && !Files.isHidden(it) }
-                .map { ds_root.resolve(it.fileName.toString()) }
-                .use { it.toList().toMutableList() }
+                // Identify the existing variants
+//            val existing_variants = Files.list(variant_root)
+//                .filter { Files.isDirectory(it) && !Files.isHidden(it) }
+//                .map { ds_root.resolve(it.fileName.toString()) }
+//                .use { it.toList().toMutableList() }
+//
+//            // Get the list of base programs (existing + random selection)
+//            val base_programs = if (existing_variants.size != 5) {
+//                // Get a list of additional variants
+//                existing_variants + Files.list(ds_root)
+//                    .parallel()
+//                    .filter { Files.isDirectory(it) && !Files.isHidden(it) && !existing_variants.contains(it) }
+//                    .filter { VariantValidator.validateVariant(it, global_libs) }
+//                    .use { it.toList() }
+//                    .sortedBy { it.fileName.toString() }
+//                    .shuffled()
+//                    .take(5 - existing_variants.size)
+//            } else {
+//                existing_variants
+//            }
 
-            // Get the list of base programs (existing + random selection)
-            val base_programs = if (existing_variants.size != 5) {
-                // Get a list of additional variants
-                existing_variants + Files.list(ds_root)
-                    .parallel()
-                    .filter { Files.isDirectory(it) && !Files.isHidden(it) && !existing_variants.contains(it) }
-                    .filter { VariantValidator.validateVariant(it, global_libs) }
+                val base_programs = Files.list(ds_root)
                     .use { it.toList() }
-                    .sortedBy { it.fileName.toString() }
-                    .shuffled()
-                    .take(5 - existing_variants.size)
-            } else {
-                existing_variants
-            }
 
-            // Iterate through base programs
-            baseLoop@for (base in base_programs) {
-                val base_out = variant_root.resolve(base.fileName.toString())
-                if (!Files.exists(base_out))
-                    Files.createDirectories(base_out)
+                // Iterate through base programs
+                baseLoop@for (base in base_programs) {
+                    val base_out = variant_root.resolve(base.fileName.toString())
+                    if (!Files.exists(base_out))
+                        Files.createDirectories(base_out)
 
-                // For the 5 levels of transformation
-                levelLoop@for (level in 1 .. 5) {
-                    val level_out = base_out.resolve("L${level}")
+                    // For the 5 levels of transformation
+                    levelLoop@for (level in 1 .. 5) { // 1 .. 5) {
+                        val level_out = base_out.resolve("L${level}")
 
-                    // For the variant probability levels
-                    for (trns_level in trns_levels) {
-                        val trns_out = level_out.resolve("T${trns_level}")
+                        // For the variant probability levels
+                        for (trns_level in trns_levels) {
+                            val trns_out = level_out.resolve("T${trns_level}")
 
-                        // Create the 10 variants
-                        for (i in 1 .. variant_count) {
-                            val variant_out = trns_out.resolve("V${i}")
+                            // Create the 10 variants
+                            for (i in 1 .. variant_count) {
+                                val variant_out = trns_out.resolve("V${i}")
 
-                            // Continue if the variant already exists
-                            if (Files.exists(variant_out)) continue
+                                // Continue if the variant already exists
+                                if (Files.exists(variant_out)) continue
 
-                            var error_counter = 0
+                                var error_counter = 0
 
-                            creationLoop@do {
-                                // Create working directory + copy over synonym db
-                                val work = Files.createTempDirectory("SPPlagiarise_work")
-                                synchronized(this) {
-                                    Files.copy(Paths.get("db.blob"), work.resolve("db.blob"))
-                                }
-
-                                try {
-                                    // Make the variant
-                                    val config = makeConfig(level, trns_level)
-                                    val variant = makeVariant(work, base, global_libs, config)
-
-                                    if (variant != null) {  // A path was returned
-                                        if (VariantValidator.validateVariant(variant, global_libs)) {  // Success
-
-                                            if (!Files.exists(base_out)) {
-                                                error_counter = Int.MAX_VALUE
-                                                System.err.println("Base output is removed")
-                                                continue@baseLoop
-                                            }
-
-                                            // Copy over the created variant
-                                            if (!Files.exists(variant_out.parent)) Files.createDirectories(variant_out.parent)
-                                            FileUtils.copyDir(variant, variant_out)
-
-                                            // Success
-                                            println("Created ${base} L${level} ${trns_level}% $i")
-                                            break@creationLoop
-
-                                        } else {    // Invalid variant
-                                            throw Exception("Variant is invalid")
-                                        }
-                                    } else {
-                                        throw Exception("No variant returned")
-                                    }
-
-                                } catch (e: Exception) {
-                                    // Something bad happened - try again
-                                    System.err.println("Failed ${base} L${level} ${trns_level}% $i")
-                                    System.err.println(e.message)
-
-                                    error_counter++
-                                    continue@creationLoop
-
-                                } finally {
-                                    // Copy back the synonym db
+                                creationLoop@do {
+                                    // Create working directory + copy over synonym db
+                                    val work = Files.createTempDirectory("SPPlagiarise_work")
                                     synchronized(this) {
-                                        Files.copy(work.resolve("db.blob"), Paths.get("db.blob"), StandardCopyOption.REPLACE_EXISTING)
+                                        Files.copy(Paths.get("db.blob"), work.resolve("db.blob"))
                                     }
 
-                                    // Delete the work directory
-                                    FileUtils.deleteDirectory(work)
+                                    try {
+                                        // Make the variant
+                                        val config = makeConfig(level, trns_level)
+                                        val variant = makeVariant(work, base, global_libs, config)
+
+                                        if (variant != null) {  // A path was returned
+                                            if (VariantValidator.validateVariant(variant, global_libs)) {  // Success
+
+                                                if (!Files.exists(base_out)) {
+                                                    error_counter = Int.MAX_VALUE
+                                                    System.err.println("Base output is removed")
+                                                    continue@baseLoop
+                                                }
+
+                                                // Copy over the created variant
+                                                if (!Files.exists(variant_out.parent)) Files.createDirectories(variant_out.parent)
+                                                FileUtils.copyDir(variant, variant_out)
+
+                                                // Success
+                                                println("Created ${base} L${level} ${trns_level}% $i")
+                                                break@creationLoop
+
+                                            } else {    // Invalid variant
+                                                throw Exception("Variant is invalid")
+                                            }
+                                        } else {
+                                            throw Exception("No variant returned")
+                                        }
+
+                                    } catch (e: Exception) {
+                                        // Something bad happened - try again
+                                        System.err.println("Failed ${base} L${level} ${trns_level}% $i")
+                                        System.err.println(e.message)
+
+                                        error_counter++
+                                        continue@creationLoop
+
+                                    } finally {
+                                        // Copy back the synonym db
+                                        synchronized(this) {
+                                            Files.copy(work.resolve("db.blob"), Paths.get("db.blob"), StandardCopyOption.REPLACE_EXISTING)
+                                        }
+
+                                        // Delete the work directory
+                                        FileUtils.deleteDirectory(work)
+                                    }
+                                } while (error_counter < 10)
+
+                                if (error_counter >= 10) {
+                                    System.err.println("ERROR::Terminating ${base} L${level} ${trns_level}% $i")
+
+                                    Files.walk(base_out)
+                                        .sorted(Comparator.reverseOrder())
+                                        .forEach(Files::delete)
+
+                                    continue@levelLoop
                                 }
-                            } while (error_counter < 10)
-
-                            if (error_counter >= 10) {
-                                System.err.println("ERROR::Terminating ${base} L${level} ${trns_level}% $i")
-
-                                Files.walk(base_out)
-                                    .sorted(Comparator.reverseOrder())
-                                    .forEach(Files::delete)
-
-                                continue@levelLoop
                             }
                         }
                     }
                 }
             }
-        }
     }
 
     private fun makeVariant(work: Path, base: Path, libs: List<Path>, config: ConfigDocument): Path? {

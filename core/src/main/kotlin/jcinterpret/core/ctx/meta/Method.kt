@@ -82,7 +82,7 @@ class InterpretedMethod(desc: MethodDescriptor, val decl: MethodDeclaration): Me
 
         val callCount = ctx.countMethodOccurenceInCallStack(sig)
         val returnType = sig.methodSignature.typeSignature.returnType
-        if (callCount > ExecutionConfig.maxRecursiveCalls) {
+        if (callCount > ExecutionConfig.maxRecursiveCalls || ExecutionConfig.allMethodCoverage == true) {
             val result: StackValue?
 
             if (returnType != PrimitiveTypeSignature.VOID) {

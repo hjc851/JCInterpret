@@ -1,8 +1,9 @@
-package jcinterpret.testconsole.automator.accuracy
+package jcinterpret.testconsole.JA3.accuracy
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import jcinterpret.testconsole.pipeline.comparison.ProcessedProjectComparator
+import jcinterpret.testconsole.JA3.comparator.NoiseFilteredSingleProjectComparator
+import jcinterpret.testconsole.JA3.comparator.SingleProjectComparator
 import jcinterpret.testconsole.utils.Forker
 import jcinterpret.testconsole.utils.ProjectModelBuilder
 import java.nio.file.Files
@@ -22,7 +23,7 @@ import kotlin.streams.toList
 object PairwiseComparisonAutomator {
     @JvmStatic
     fun main(args: Array<String>) {
-        val graphs = Paths.get("/media/haydencheers/Data/SymbExec/graphs")
+        val graphs = Paths.get("/media/haydencheers/Big Data/SymbExec/graphs")
 
         val dataSets = listOf(
             "COMP2230_A1_2018",
@@ -41,7 +42,8 @@ object PairwiseComparisonAutomator {
 
         for (ds in dataSets) {
             val graphRoot = graphs.resolve(ds)
-            val results = Paths.get("/media/haydencheers/Data/SymbExec/results-pairwise/${ds}.txt")
+            val results = Paths.get("/media/haydencheers/Big Data/SymbExec/results-nonoise-subsetcoef-pairwise/${ds}.txt")
+
             if (Files.exists(results)) continue
             if (!Files.exists(results.parent)) Files.createDirectories(results.parent)
 
@@ -102,7 +104,7 @@ object PairwiseComparisonAutomator {
                 sem.acquire()
                 CompletableFuture.runAsync {
                     val res = Forker.exec(
-                        SingleProjectComparator::class.java,
+                        NoiseFilteredSingleProjectComparator::class.java,
                         arrayOf(
                             lhs.rootPath.toAbsolutePath().toString(),
                             rhs.rootPath.toAbsolutePath().toString(),
@@ -116,7 +118,7 @@ object PairwiseComparisonAutomator {
 
                     if (res == 0) {
                         val result = Files.newBufferedReader(outf).use { reader ->
-                            mapper.readValue(reader, SingleProjectComparator.SingleComparisonResult::class.java)
+                            mapper.readValue(reader, NoiseFilteredSingleProjectComparator.SingleComparisonResult::class.java)
                         }
 
                         sims.getOrPut(lid) { ConcurrentHashMap() }.put(rid, result.lsim)
@@ -145,45 +147,6 @@ object PairwiseComparisonAutomator {
 
         return sims
     }
-}
-
-object SingleProjectComparator {
-
-    val mapper = ObjectMapper().registerModule(KotlinModule())
-
-    @JvmStatic
-    fun main(args: Array<String>) {
-        val lhs = Paths.get(args[0])
-        val rhs = Paths.get(args[1])
-
-        val output = Paths.get(args[2])
-
-        val lproj = ProjectModelBuilder.build(lhs)
-        val rproj = ProjectModelBuilder.build(rhs)
-
-        ProcessedProjectComparator.TAINT_MATCH_THRESHOLD = 0.8
-        val result = ProcessedProjectComparator.compareExecutionGraphs(lproj, rproj)
-        val resultBean =
-            SingleComparisonResult(
-                result.l.projectId,
-                result.r.projectId,
-                result.lsim,
-                result.rsim
-            )
-
-        Files.newBufferedWriter(output).use { writer ->
-            mapper.writeValue(writer, resultBean)
-        }
-
-        System.exit(0)
-    }
-
-    data class SingleComparisonResult (
-        val lhs: String,
-        val rhs: String,
-        val lsim: Double,
-        val rsim: Double
-    )
 }
 
 

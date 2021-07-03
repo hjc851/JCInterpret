@@ -3,7 +3,6 @@ package jcinterpret.testconsole.pipeline
 import jcinterpret.core.ExecutionConfig
 import jcinterpret.core.JavaConcolicInterpreterFactory
 import jcinterpret.core.TooManyContextsException
-import jcinterpret.core.bytecode.BytecodeLibraryFactory
 import jcinterpret.core.control.UnsupportedLanguageFeature
 import jcinterpret.core.descriptors.DescriptorLibraryFactory
 import jcinterpret.core.descriptors.UnresolvableDescriptorException
@@ -26,7 +25,7 @@ import java.util.*
 import java.util.concurrent.CompletableFuture
 import kotlin.streams.toList
 
-object TraceGenerator {
+object TraceGenerator_AllMethods {
     @JvmStatic
     fun main(args: Array<String>) {
         try {
@@ -54,6 +53,7 @@ object TraceGenerator {
         ExecutionConfig.loggingEnabled = document.loggingEnabled
         ExecutionConfig.maxLoopExecutions = document.maxLoopExecutions
         ExecutionConfig.maxRecursiveCalls = document.maxRecursiveCalls
+        ExecutionConfig.allMethodCoverage = true
 
         val root = docPath.parent
         val projectsRoot = root.resolve(document.projectsRoot)
@@ -115,10 +115,9 @@ object TraceGenerator {
                     return@map null
                 }
 
-                val bytecodeLibrary = BytecodeLibraryFactory.build(path)
-                val sourceLibrary = SourceLibraryFactory.build(compilationUnits)
                 val descriptorLibrary = DescriptorLibraryFactory.build(compilationUnits, libraries)
-                val entries = EntryPointFinder.find(compilationUnits, eps)
+                val sourceLibrary = SourceLibraryFactory.build(compilationUnits)
+                val entries = EntryPointFinder.findAllMethods(compilationUnits)
 
                 if (entries.isEmpty()) {
                     println("No entry points for ${id}")
@@ -131,7 +130,6 @@ object TraceGenerator {
                     compilationUnits,
                     descriptorLibrary,
                     sourceLibrary,
-                    bytecodeLibrary,
                     entries
                 )
             }.toList()
@@ -156,13 +154,7 @@ object TraceGenerator {
                     val result = project.entries.parallelStream()
                         .map { entry ->
                             val sig = entry.binding.qualifiedSignature()
-                            val interpreter = JavaConcolicInterpreterFactory.build(
-                                JavaConcolicInterpreterFactory.ExecutionMode.PROJECT_BYTECODE,
-                                sig,
-                                project.descriptorLibrary,
-                                project.sourceLibrary,
-                                project.bytecodeLibrary
-                            )
+                            val interpreter = JavaConcolicInterpreterFactory.build(sig, project.descriptorLibrary, project.sourceLibrary)
                             val traces = interpreter.execute()
                             return@map entry to traces
                         }.toList()

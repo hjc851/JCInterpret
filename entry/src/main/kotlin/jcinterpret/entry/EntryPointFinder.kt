@@ -26,7 +26,49 @@ object EntryPointFinder {
             .toList()
         return entries
     }
+
+    fun findAllMethods(compilationUnits: List<CompilationUnit>): List<EntryPoint>  {
+        val entries = compilationUnits.parallelStream()
+            .flatMap { cu ->
+                val visitor = EntryPointVisitor_AllMethods()
+                cu.accept(visitor)
+                return@flatMap visitor.entryPoints.stream()
+            }
+            .toList()
+        return entries
+    }
 }
+
+class EntryPointVisitor_AllMethods() : ASTVisitor() {
+    private val _entryPoints = mutableListOf<EntryPoint>()
+    val entryPoints: List<EntryPoint> get() = _entryPoints
+
+    override fun visit(node: MethodDeclaration): Boolean {
+        val binding = node.resolveBinding()
+
+        if (node.body == null || node.body.statements().isEmpty()) {
+            return true
+        }
+
+        if (binding.name.startsWith("get") || binding.name.startsWith("is")) {
+            if (binding.returnType.name != "void" && binding.parameterTypes.isNotEmpty())  {
+                if (node.body.statements().size == 1) {
+                    return true
+                }
+            }
+        } else if (binding.name.startsWith("set")) {
+            if (binding.returnType.name == "void" && binding.parameterTypes.size == 1) {
+                if (node.body.statements().size == 1) {
+                    return true
+                }
+            }
+        }
+
+        _entryPoints.add(EntryPoint(node.resolveBinding()))
+        return true
+    }
+}
+
 
 class EntryPointVisitor(val advice: List<String>) : ASTVisitor() {
     private val _entryPoints = mutableListOf<EntryPoint>()

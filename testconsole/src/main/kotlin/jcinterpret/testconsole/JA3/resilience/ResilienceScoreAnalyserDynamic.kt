@@ -1,4 +1,4 @@
-package jcinterpret.testconsole.automator.resilience
+package jcinterpret.testconsole.JA3.resilience
 
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -6,7 +6,10 @@ import kotlin.streams.toList
 
 object ResilienceScoreAnalyserDynamic {
 
-    val root = Paths.get("/media/haydencheers/Data/SymbExec/results")
+//    val root = Paths.get("/media/haydencheers/Data/SymbExec/results")
+
+//    val root = Paths.get("/media/haydencheers/Big Data/SymbExec/results-nonoise")
+    val root = Paths.get("/media/haydencheers/Big Data/SymbExec/results-nonoise-subsetcoef")
 
     val dss = arrayOf(
         "Collected_20",
@@ -81,23 +84,30 @@ object ResilienceScoreAnalyserDynamic {
 
             for (base in bases) {
                 val file = resultroot.resolve("${base}.txt")
-                val lines = Files.lines(file)
+                val _lines = Files.lines(file)
                     .use { it.toList() }
-                    .drop(1)
-                    .map {
+//                    .drop(1)
+                val lines = _lines.map {
                         val comps = it.split("\t")
                         return@map Comparison(
-                            base,
                             comps[0],
-                            comps[1].toDouble() * 100.0
+                            comps[1],
+                            comps[2].toDouble() * 100.0
                         )
-                    }
+                    }.groupBy { setOf(it.lhs, it.rhs) }
+                    .map { it.value.maxBy { it.sim }!! }
 
-                val l1 = lines.take(10)
-                val l2 = lines.drop(10).take(20)
-                val l3 = lines.drop(30).take(30)
-                val l4 = lines.drop(60).take(40)
-                val l5 = lines.drop(100).take(50)
+                val l1 = lines.filter { it.lhs.contains("-L1-") || it.rhs.contains("-L1-") }
+                val l2 = lines.filter { it.lhs.contains("-L2-") || it.rhs.contains("-L2-") }
+                val l3 = lines.filter { it.lhs.contains("-L3-") || it.rhs.contains("-L3-") }
+                val l4 = lines.filter { it.lhs.contains("-L4-") || it.rhs.contains("-L4-") }
+                val l5 = lines.filter { it.lhs.contains("-L5-") || it.rhs.contains("-L5-") }
+
+//                val l1 = lines.take(10)
+//                val l2 = lines.drop(10).take(20)
+//                val l3 = lines.drop(30).take(30)
+//                val l4 = lines.drop(60).take(40)
+//                val l5 = lines.drop(100).take(50)
 
                 val l1avg = l1.map { it.sim }.average()
                 val l2avg = l2.map { it.sim }.average()
