@@ -1,11 +1,8 @@
-package jcinterpret.testconsole.automator
+package jcinterpret.testconsole.JA3
 
 import jcinterpret.core.ExecutionConfig
 import jcinterpret.core.JavaConcolicInterpreterFactory
-import jcinterpret.core.TooManyContextsException
-import jcinterpret.core.control.UnsupportedLanguageFeature
 import jcinterpret.core.descriptors.DescriptorLibraryFactory
-import jcinterpret.core.descriptors.UnresolvableDescriptorException
 import jcinterpret.core.descriptors.qualifiedSignature
 import jcinterpret.core.source.SourceLibraryFactory
 import jcinterpret.core.trace.EntryPointExecutionTraces
@@ -18,12 +15,10 @@ import jcinterpret.testconsole.utils.Project
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.time.Duration
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 import kotlin.streams.toList
 
 object BPlagProgramValidator {

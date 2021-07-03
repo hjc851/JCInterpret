@@ -25,7 +25,7 @@ import java.util.*
 import java.util.concurrent.CompletableFuture
 import kotlin.streams.toList
 
-object TraceGenerator {
+object TraceGenerator_AllMethods {
     @JvmStatic
     fun main(args: Array<String>) {
         try {
@@ -53,6 +53,7 @@ object TraceGenerator {
         ExecutionConfig.loggingEnabled = document.loggingEnabled
         ExecutionConfig.maxLoopExecutions = document.maxLoopExecutions
         ExecutionConfig.maxRecursiveCalls = document.maxRecursiveCalls
+        ExecutionConfig.allMethodCoverage = true
 
         val root = docPath.parent
         val projectsRoot = root.resolve(document.projectsRoot)
@@ -116,7 +117,7 @@ object TraceGenerator {
 
                 val descriptorLibrary = DescriptorLibraryFactory.build(compilationUnits, libraries)
                 val sourceLibrary = SourceLibraryFactory.build(compilationUnits)
-                val entries = EntryPointFinder.find(compilationUnits, eps)
+                val entries = EntryPointFinder.findAllMethods(compilationUnits)
 
                 if (entries.isEmpty()) {
                     println("No entry points for ${id}")

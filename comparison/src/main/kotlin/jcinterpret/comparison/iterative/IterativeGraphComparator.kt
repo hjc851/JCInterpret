@@ -197,13 +197,16 @@ object IterativeGraphComparator {
                 doUpdateLoop()
             }
 
-            val lNodeCount = lhs.getNodeSet<Node>().count { it.degree > 0 }
-            val rNodeCount = rhs.getNodeSet<Node>().count { it.degree > 0 }
+//            val lNodeCount = lhs.getNodeSet<Node>().count { it.degree > 0 }
+//            val rNodeCount = rhs.getNodeSet<Node>().count { it.degree > 0 }
+
+            val lNodeCount = lhs.getNodeSet<Node>().size
+            val rNodeCount = rhs.getNodeSet<Node>().size
 
             val sim = (lMapped.size + rMapped.size) / (0.0 + lNodeCount + rNodeCount)
 
-            val lrSim = lMapped.size / (0.0 + rNodeCount)
-            val rlSim = rMapped.size / (0.0 + lNodeCount)
+            val lrSim = lMapped.size / (0.0 + lNodeCount)
+            val rlSim = rMapped.size / (0.0 + rNodeCount)
 
             val lDisjoint = (lNodeCount - lMapped.size) / (0.0 + lNodeCount)
             val rDisjoint = (rNodeCount - rMapped.size) / (0.0 + rNodeCount)

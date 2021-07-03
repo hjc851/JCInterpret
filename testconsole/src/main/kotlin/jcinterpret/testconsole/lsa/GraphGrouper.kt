@@ -1,4 +1,4 @@
-package jcinterpret.testconsole.automator
+package jcinterpret.testconsole.lsa
 
 import org.apache.commons.io.FileUtils
 import java.nio.file.Files
@@ -6,7 +6,7 @@ import java.nio.file.Paths
 import kotlin.streams.toList
 
 object GraphGrouper {
-    val root = Paths.get("/media/haydencheers/Data/SymbExec/graphs/Algorithms_60")
+    val root = Paths.get("/media/haydencheers/Data/SymbExec/graphs/Algorithms_20")
 
 //    val bases = listOf(
 //        "P1",

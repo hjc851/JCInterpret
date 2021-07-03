@@ -1,4 +1,4 @@
-package jcinterpret.testconsole.automator.resilience
+package jcinterpret.testconsole.JA3.resilience
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import jcinterpret.document.DocumentUtils

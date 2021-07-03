@@ -1,4 +1,4 @@
-package jcinterpret.testconsole.automator.accuracy
+package jcinterpret.testconsole.JA3.accuracy
 
 import jcinterpret.testconsole.pipeline.SingleGraphProcessor
 import jcinterpret.testconsole.utils.FileUtils

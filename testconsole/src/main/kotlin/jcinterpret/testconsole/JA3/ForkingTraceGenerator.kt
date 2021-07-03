@@ -1,4 +1,4 @@
-package jcinterpret.testconsole.automator
+package jcinterpret.testconsole.JA3
 
 import jcinterpret.document.ConfigDocument
 import jcinterpret.document.DocumentUtils
@@ -13,9 +13,9 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Semaphore
 import kotlin.streams.toList
 
-val MAX_PARALLEL = 32
-
 object ForkingTraceGenerator {
+    val MAX_PARALLEL = 32
+
     @JvmStatic
     fun main(args: Array<String>) {
         if (args.count() != 1)
@@ -109,11 +109,12 @@ object ForkingTraceGenerator {
 
         println("Awaiting finish ...")
         sem.acquire(MAX_PARALLEL)
+        sem.release(MAX_PARALLEL)
 
         val finish = Instant.now()
         val elapsed = Duration.between(start, finish)
 
         println("Elapsed: ${elapsed.seconds}s")
-        System.exit(0)
+//        System.exit(0)
     }
 }

@@ -1,7 +1,9 @@
-package jcinterpret.testconsole.automator.accuracy
+package jcinterpret.testconsole.JA3.accuracy
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import jcinterpret.testconsole.JA3.comparator.NoiseFilteredSingleProjectComparator
+import jcinterpret.testconsole.JA3.comparator.SingleProjectComparator
 import jcinterpret.testconsole.utils.Forker
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -11,10 +13,10 @@ import java.util.concurrent.Semaphore
 import kotlin.streams.toList
 
 object AccuracyVariantComparisonAutomator {
-    val variant_graphs = Paths.get("/media/haydencheers/Data/SymbExec/variant_graph")
-    val base_graphs = Paths.get("/media/haydencheers/Data/SymbExec/graphs")
+    val variant_graphs = Paths.get("/media/haydencheers/Big Data/SymbExec/variant_graph")
+    val base_graphs = Paths.get("/media/haydencheers/Big Data/SymbExec/graphs")
 
-    var results_out = Paths.get("/media/haydencheers/Data/SymbExec/variant_results")
+    var results_out = Paths.get("/media/haydencheers/Big Data/SymbExec/variant_results_nonoise_subsetcoeffic")
 
     val ds_names = listOf(
         "COMP2230_A1_2018",
@@ -79,7 +81,7 @@ object AccuracyVariantComparisonAutomator {
                     sem.acquire()
                     CompletableFuture.runAsync {
                         val res = Forker.exec(
-                            SingleProjectComparator::class.java,
+                            NoiseFilteredSingleProjectComparator::class.java,
                             arrayOf(
                                 base_path.toAbsolutePath().toString(),
                                 variant.toAbsolutePath().toString(),
@@ -96,7 +98,7 @@ object AccuracyVariantComparisonAutomator {
 
                         if (res == 0) {
                             val result = Files.newBufferedReader(outf).use { reader ->
-                                mapper.readValue(reader, SingleProjectComparator.SingleComparisonResult::class.java)
+                                mapper.readValue(reader, NoiseFilteredSingleProjectComparator.SingleComparisonResult::class.java)
                             }
 
                             sims.getOrPut(lid) { ConcurrentHashMap() }.put(rid, result.lsim)

@@ -1,4 +1,4 @@
-package jcinterpret.testconsole.automator.resilience
+package jcinterpret.testconsole.JA3.resilience
 
 import jcinterpret.testconsole.pipeline.comparison.ProcessedProjectComparator
 import jcinterpret.testconsole.utils.ProjectModelBuilder

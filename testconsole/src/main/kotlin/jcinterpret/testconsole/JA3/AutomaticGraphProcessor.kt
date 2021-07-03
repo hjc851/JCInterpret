@@ -1,16 +1,12 @@
-package jcinterpret.testconsole.automator
+package jcinterpret.testconsole.JA3
 
-import jcinterpret.testconsole.pipeline.GraphProcessor
 import jcinterpret.testconsole.pipeline.SingleGraphProcessor
 import jcinterpret.testconsole.utils.Forker
-import java.io.PrintStream
-import java.io.PrintWriter
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.Semaphore
 import kotlin.streams.toList
 
@@ -26,7 +22,7 @@ object AutomaticGraphProcessor {
 //            "COMP2240_A2_2018",
 //            "COMP2240_A3_2018",
 //            "SENG1110_A1_2017",
-            "SENG1110_A2_2017"
+//            "SENG1110_A2_2017"
 //            ,
 //            "SENG2050_A1_2017",
 //            "SENG2050_A2_2017",
@@ -34,6 +30,14 @@ object AutomaticGraphProcessor {
 //            "SENG2050_A2_2018",
 //            "SENG2050_A1_2019",
 //            "SENG2050_A2_2019"
+
+//            "Algorithms_20",
+//            "Algorithms_40",
+//            "Algorithms_60"
+
+            "Collected_20",
+            "Collected_40",
+            "Collected_60"
         )
 
         val MAX_PARALLEL = 8
@@ -64,7 +68,7 @@ object AutomaticGraphProcessor {
                             outd.toAbsolutePath().toString()
                         ),
                         arrayOf(
-                            "-Xmx120G",
+                            "-Xmx20G",
                             "-Djava.util.concurrent.ForkJoinPool.common.parallelism=8"
                         )
                     )
