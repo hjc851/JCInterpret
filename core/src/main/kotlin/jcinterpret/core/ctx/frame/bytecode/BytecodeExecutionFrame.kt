@@ -1,9 +1,11 @@
 package jcinterpret.core.ctx.frame.bytecode
 
+import com.sun.tools.classfile.ClassFile
 import com.sun.tools.classfile.ConstantPool
 import jcinterpret.core.ctx.ExecutionContext
 import jcinterpret.core.ctx.frame.MethodBoundExecutionFrame
 import jcinterpret.core.memory.stack.StackValue
+import jcinterpret.core.utils.ByteUtils
 import jcinterpret.signature.QualifiedMethodSignature
 import org.apache.commons.io.EndianUtils
 
@@ -39,18 +41,20 @@ class BytecodeExecutionFrame(
     //  Helpers //
     //  //  //  //
 
-    fun nextByte(): Short {
-        return (code[pc++].toInt() and 0xff).toShort()
+    fun branch(offset: Short) {
+        this.pc += offset
+
+        if (this.pc > code.size) {
+            throw IllegalStateException("pc is larger than code size")
+        }
     }
 
-    fun nextShort(): Int {
-        val short = EndianUtils.readSwappedUnsignedShort(this.code, this.pc)
-        this.pc += 2
-        return short
+    fun nextByte(): Byte {
+        return this.code[this.pc++]
     }
 
-    fun nextUnsignedShort(): Int {
-        val short = EndianUtils.readSwappedUnsignedShort(this.code, this.pc)
+    fun nextShort(): Short {
+        val short = ByteUtils.readShort(this.code, this.pc)
         this.pc += 2
         return short
     }

@@ -2,18 +2,16 @@ package jcinterpret.core.ctx.frame.bytecode
 
 import com.sun.tools.classfile.ConstantPool
 import jcinterpret.core.ctx.ExecutionContext
-import jcinterpret.core.ctx.frame.interpreted.PrimaryOperationUtils
 import jcinterpret.core.memory.heap.SymbolicArray
 import jcinterpret.core.memory.stack.*
-import org.apache.commons.io.EndianUtils
-import java.nio.ByteBuffer
+import jcinterpret.core.trace.TraceRecord
 
 object BytecodeExecutor {
 
     val handles = mapOf(
         "32" to ::aaload,
         "53" to ::aastore,
-        "1" to ::aconst_null,
+        "01" to ::aconst_null,
         "19" to ::aload,
         "2a" to ::aload_0,
         "2b" to ::aload_1,
@@ -108,13 +106,13 @@ object BytecodeExecutor {
         "2e" to ::iaload,
         "7e" to ::iand,
         "4f" to ::iastore,
-        "2" to ::iconst_m1,
-        "3" to ::iconst_0,
-        "4" to ::iconst_1,
-        "5" to ::iconst_2,
-        "6" to ::iconst_3,
-        "7" to ::iconst_4,
-        "8" to ::iconst_5,
+        "02" to ::iconst_m1,
+        "03" to ::iconst_0,
+        "04" to ::iconst_1,
+        "05" to ::iconst_2,
+        "06" to ::iconst_3,
+        "07" to ::iconst_4,
+        "08" to ::iconst_5,
         "6c" to ::idiv,
         "a5" to ::if_acmpeq,
         "a6" to ::if_acmpne,
@@ -169,7 +167,7 @@ object BytecodeExecutor {
         "7f" to ::land,
         "50" to ::lastore,
         "94" to ::lcmp,
-        "9" to ::lconst_0,
+        "09" to ::lconst_0,
         "0a" to ::lconst_1,
         "12" to ::ldc,
         "13" to ::ldc_w,
@@ -201,7 +199,7 @@ object BytecodeExecutor {
         "c5" to ::multianewarray,
         "bb" to ::new,
         "bc" to ::newarray,
-        "0" to ::nop,
+        "00" to ::nop,
         "57" to ::pop,
         "58" to ::pop2,
         "b5" to ::putfield,
@@ -230,7 +228,13 @@ object BytecodeExecutor {
     // load onto the stack a reference from an array
     // arrayref, index → value
     fun aaload(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        val idx = frame.pop()
+        val aarrref = frame.pop() as ReferenceValue
+
+        val aarr = ctx.heapArea.dereference(aarrref) as SymbolicArray
+        val value = aarr.get(idx, jcinterpret.signature.ClassTypeSignature.OBJECT, ctx)
+
+        frame.push(value)
     }
 
     // store a reference in an array
@@ -829,43 +833,43 @@ object BytecodeExecutor {
     // load the int value −1 onto the stack
 // → -1
     fun iconst_m1(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        frame.push(StackInt(-1))
     }
 
     // load the int value 0 onto the stack
 // → 0
     fun iconst_0(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        frame.push(StackInt(0))
     }
 
     // load the int value 1 onto the stack
 // → 1
     fun iconst_1(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        frame.push(StackInt(1))
     }
 
     // load the int value 2 onto the stack
 // → 2
     fun iconst_2(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        frame.push(StackInt(2))
     }
 
     // load the int value 3 onto the stack
 // → 3
     fun iconst_3(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        frame.push(StackInt(3))
     }
 
     // load the int value 4 onto the stack
 // → 4
     fun iconst_4(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        frame.push(StackInt(4))
     }
 
     // load the int value 5 onto the stack
 // → 5
     fun iconst_5(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        frame.push(StackInt(5))
     }
 
     // divide two integers
@@ -893,9 +897,32 @@ object BytecodeExecutor {
     }
 
     // if value1 is greater than or equal to value2, branch to instruction at branchoffset (signed short constructed from unsigned bytes branchbyte1 << 8 | branchbyte2)
-// value1, value2 →
+    // value1, value2 →
     fun if_icmpge(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        val v1 = frame.pop()
+        val v2 = frame.pop()
+
+        val offset = frame.nextShort()
+
+        if (v1 is ConcreteValue<*> && v2 is ConcreteValue<*>) {
+            val truth = (v1 as StackInt).value >= (v2 as StackInt).value
+
+            if (truth) {
+                frame.branch(offset)
+            }
+
+        } else {
+            // Assume v1 >= v2 in branch
+            ctx.fork {
+                val fframe = it.currentFrame as  BytecodeExecutionFrame
+                fframe.branch(offset)
+
+                it.records.add(TraceRecord.Assertion(BinaryOperationValue(v1, v2, StackType.INT, BinaryOperator.GREATEREQUALS), true))
+            }
+
+            // Here, v1 < v2
+            ctx.records.add(TraceRecord.Assertion(BinaryOperationValue(v1, v2, StackType.INT, BinaryOperator.GREATEREQUALS), false))
+        }
     }
 
     // if value1 is greater than value2, branch to instruction at branchoffset (signed short constructed from unsigned bytes branchbyte1 << 8 | branchbyte2)
@@ -925,65 +952,77 @@ object BytecodeExecutor {
     // if value is 0, branch to instruction at branchoffset (signed short constructed from unsigned bytes branchbyte1 << 8 | branchbyte2)
     // value →
     fun ifeq(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
         val value = frame.pop()
-        BytecodePrimaryOperatorUtils.iequal(frame, value, StackInt(0))
+        TODO()
     }
 
     // if value is greater than or equal to 0, branch to instruction at branchoffset (signed short constructed from unsigned bytes branchbyte1 << 8 | branchbyte2)
     // value →
     fun ifge(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
         val value = frame.pop()
-        BytecodePrimaryOperatorUtils.igreaterequal(frame, value, StackInt(0))
+        TODO()
     }
 
     // if value is greater than 0, branch to instruction at branchoffset (signed short constructed from unsigned bytes branchbyte1 << 8 | branchbyte2)
     // value →
     fun ifgt(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
         val value = frame.pop()
-        BytecodePrimaryOperatorUtils.igreater(frame, value, StackInt(0))
+        TODO()
     }
 
     // if value is less than or equal to 0, branch to instruction at branchoffset (signed short constructed from unsigned bytes branchbyte1 << 8 | branchbyte2)
     // value →
     fun ifle(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
         val value = frame.pop()
-        BytecodePrimaryOperatorUtils.ilessequal(frame, value, StackInt(0))
+        val offset = frame.nextShort()
+
+        if (value is ConcreteValue<*>) {
+            val truth = (value as StackInt).value <= 0
+
+            if (truth) {
+                frame.branch(offset)
+            }
+
+        } else {
+            // Assume value is <= 0 in branch
+            ctx.fork {
+                val fframe = it.currentFrame as  BytecodeExecutionFrame
+                fframe.branch(offset)
+
+                it.records.add(TraceRecord.Assertion(BinaryOperationValue(value, StackInt(0), StackType.INT, BinaryOperator.LESSEQUALS), true))
+            }
+
+            // Here, value is > 0
+            ctx.records.add(TraceRecord.Assertion(BinaryOperationValue(value, StackInt(0), StackType.INT, BinaryOperator.LESSEQUALS), false))
+        }
     }
 
     // if value is less than 0, branch to instruction at branchoffset(signed short constructed from unsigned bytes branchbyte1 << 8 | branchbyte2)
     // value →
     fun iflt(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
         val value = frame.pop()
-        BytecodePrimaryOperatorUtils.iless(frame, value, StackInt(0))
+        TODO()
     }
 
     // if value is not 0, branch to instruction at branchoffset(signed short constructed from unsigned bytes branchbyte1 << 8 | branchbyte2)
     // value →
     fun ifne(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
         val value = frame.pop()
-        BytecodePrimaryOperatorUtils.inotequal(frame, value, StackInt(0))
+        TODO()
     }
 
     // if value is not null, branch to instruction at branchoffset(signed short constructed from unsigned bytes branchbyte1 << 8 | branchbyte2)
     // value →
     fun ifnonnull(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
         val value = frame.pop() as ReferenceValue
-        BytecodePrimaryOperatorUtils.anotequal(frame, value, StackNil)
+        TODO()
     }
 
     // if value is null, branch to instruction at branchoffset (signed short constructed from unsigned bytes branchbyte1 << 8 | branchbyte2)
     // value →
     fun ifnull(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
         val value = frame.pop() as ReferenceValue
-        BytecodePrimaryOperatorUtils.aequal(frame, value, StackNil)
+        TODO()
     }
 
     // increment local variable #index by signed byte const
@@ -995,31 +1034,38 @@ object BytecodeExecutor {
     // load an int value from a local variable #index
     // → value
     fun iload(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        val idx = frame.nextByte().toInt()
+        val value = frame.locals[idx]
+
+        frame.push(value)
     }
 
     // load an int value from local variable 0
     // → value
     fun iload_0(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        val value = frame.locals[0]
+        frame.push(value)
     }
 
     // load an int value from local variable 1
 // → value
     fun iload_1(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        val value = frame.locals[1]
+        frame.push(value)
     }
 
     // load an int value from local variable 2
 // → value
     fun iload_2(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        val value = frame.locals[2]
+        frame.push(value)
     }
 
     // load an int value from local variable 3
 // → value
     fun iload_3(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        val value = frame.locals[3]
+        frame.push(value)
     }
 
     // reserved for implementation-dependent operations within debuggers; should not appear in any class file
@@ -1115,31 +1161,38 @@ object BytecodeExecutor {
     // store int value into variable #index
 // value →
     fun istore(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        val value = frame.pop()
+        val idx = frame.nextByte().toInt()
+
+        frame.locals[idx] = value
     }
 
     // store int value into variable 0
 // value →
     fun istore_0(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        val value = frame.pop()
+        frame.locals[0] = value
     }
 
     // store int value into variable 1
 // value →
     fun istore_1(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        val value = frame.pop()
+        frame.locals[1] = value
     }
 
     // store int value into variable 2
 // value →
     fun istore_2(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        val value = frame.pop()
+        frame.locals[2] = value
     }
 
     // store int value into variable 3
 // value →
     fun istore_3(ctx: ExecutionContext, frame: BytecodeExecutionFrame) {
-        TODO("Not implemented")
+        val value = frame.pop()
+        frame.locals[3] = value
     }
 
     // int subtract

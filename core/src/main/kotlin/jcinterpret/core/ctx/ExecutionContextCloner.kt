@@ -1,6 +1,7 @@
 package jcinterpret.core.ctx
 
 import jcinterpret.core.ctx.frame.ExecutionFrame
+import jcinterpret.core.ctx.frame.bytecode.BytecodeExecutionFrame
 import jcinterpret.core.ctx.frame.interpreted.*
 import jcinterpret.core.ctx.frame.synthetic.SyntheticExecutionFrame
 import jcinterpret.core.ctx.frame.synthetic.SyntheticInstruction
@@ -158,6 +159,18 @@ object ExecutionContextCloner {
                     oldFrame.breaks.clone() as Stack<BreakScope>,
                     oldFrame.continues.clone() as Stack<ContinueScope>,
                     oldFrame.method
+                )
+            }
+
+            is BytecodeExecutionFrame -> {
+                BytecodeExecutionFrame(
+                    oldFrame.method,
+                    oldFrame.stack.clone(),
+                    oldFrame.locals.clone(),
+                    oldFrame.cp,
+                    oldFrame.code.clone(),
+                    oldFrame.sc,
+                    oldFrame.pc
                 )
             }
 
